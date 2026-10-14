@@ -58,9 +58,10 @@ class HDHavenSourceDefinition(SearchSourceDefinition):
             credential_keys=("hdhaven_username", "hdhaven_password"),
             error_types=(HDHavenError,),
             modes=("normal", "gambler"),
+            mode_labels={"normal": "普通签到", "gambler": "赌狗签到"},
             group_title="HDHaven 签到",
             enable_cols=4,
-            mode_hint="HDHaven 赌狗签到有几率暴击获得多倍丰厚积分，也有几率扣除积分。",
+            group_hint="赌狗签到有几率暴击获得多倍积分，也有几率扣除积分。",
         )
 
     @classmethod

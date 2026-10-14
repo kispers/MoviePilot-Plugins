@@ -60,9 +60,10 @@ class Dian115SourceDefinition(SearchSourceDefinition):
             credential_keys=("dian115_email", "dian115_password"),
             error_types=(Dian115Error,),
             modes=("normal", "lucky"),
+            mode_labels={"normal": "普通签到", "lucky": "运气签到"},
             group_title="Dian115 签到与娱乐",
             enable_cols=4,
-            mode_hint="运气签到可能获得 3～10 倍奖励，也有 21% 概率扣除 1 倍普通签到积分。",
+            group_hint="运气签到可得 3～10 倍奖励，也有 21% 概率扣除 1 倍普通签到积分。",
             fields=[
                 FieldSpec(
                     key="dian115_lottery_enabled",

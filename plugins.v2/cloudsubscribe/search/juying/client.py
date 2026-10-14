@@ -61,6 +61,7 @@ class JuyingClient:
         self._save_data_func = save_data_func
         self._lock = threading.RLock()
         self._circuit_open_until = 0.0
+        self._user_id_cache = 0
         self._request_gate = RequestGate.shared(
             "聚影",
             f"{self.base_url}|{self.username.casefold()}|{self._proxies}",
@@ -372,60 +373,203 @@ class JuyingClient:
             )
         return payload
 
-    def checkin(self, mode: str = "normal") -> Dict[str, Any]:
-        """通过聚影 WebAPI 完成每日签到（聚影只有普通签到一种模式）。"""
-        before = self.get_account_info()
-        stats_before = self.get_checkin_stats()
-        already_checked_in = bool(stats_before.get("checked_today"))
-        payload: Dict[str, Any] = {}
-        stats_after = stats_before
-        if not already_checked_in:
-            try:
-                payload = self.request_json(
-                    "POST", "/api/app/checkin/do/"
-                )
-            except JuyingError:
-                stats_after = self.get_checkin_stats()
-                if not stats_after.get("checked_today"):
-                    raise
-            else:
-                stats_after = self.get_checkin_stats()
-        after = before if already_checked_in else self.get_account_info()
-        success = bool(
-            already_checked_in
-            or payload.get("status") == "success"
-            or stats_after.get("checked_today")
+    def _user_id(self) -> int:
+        """取当前账户 id：幸运签到的写操作需要账户校验头。"""
+        if self._user_id_cache > 0:
+            return self._user_id_cache
+        payload = self.request_json("GET", "/api/app/profile/")
+        user = payload.get("user") if isinstance(payload.get("user"), dict) else {}
+        self._user_id_cache = int(user.get("id") or 0)
+        return self._user_id_cache
+
+    def get_luck_stats(self) -> Dict[str, Any]:
+        """读取幸运签到状态：今日是否可参与、风险限额与概率表。"""
+        payload = self.request_json("GET", "/api/app/checkin/luck/")
+        if payload.get("status") != "success":
+            raise JuyingError(
+                "聚影幸运签到状态接口返回异常", "juying_schema_changed"
+            )
+        return payload
+
+    def get_bonus_pool(self) -> Dict[str, Any]:
+        """读取签到幸运奖池状态：剩余积分与今日可领取情况。"""
+        payload = self.request_json("GET", "/api/app/checkin/bonus-pool/")
+        if payload.get("status") != "success":
+            raise JuyingError(
+                "聚影签到奖池接口返回异常", "juying_schema_changed"
+            )
+        return payload
+
+    def draw_luck(self) -> Dict[str, Any]:
+        """执行幸运签到（与普通签到每日二选一，结果不可重抽）。"""
+        stats = self.get_luck_stats()
+        if stats.get("enabled") is False:
+            raise JuyingError("聚影幸运签到未开放", "juying_luck_disabled")
+        if stats.get("can_draw") is False:
+            raise JuyingError(
+                str(stats.get("can_draw_reason") or "聚影幸运签到今日不可参与"),
+                "juying_luck_unavailable",
+            )
+        headers: Dict[str, str] = {}
+        user_id = self._user_id()
+        if user_id > 0:
+            headers["X-Expected-App-User-Id"] = str(user_id)
+        return self.request_json(
+            "POST",
+            "/api/app/checkin/luck/draw/",
+            json={"accept_risk": True},
+            headers=headers,
         )
-        points_before = int(before.get("points") or 0)
-        points_after = int(after.get("points") or 0)
-        reward_points = stats_before.get("reward_points")
-        try:
-            reward_points = int(reward_points or 0)
-        except (TypeError, ValueError):
-            reward_points = points_after - points_before
-        status = (
-            "今日已签到"
-            if already_checked_in
-            else "签到成功" if success else "签到失败"
+
+    def claim_bonus_pool(self) -> Dict[str, Any]:
+        """领取当日签到幸运奖池：免费每日一次，奖池无余额或已领取时跳过。"""
+        payload = self.get_bonus_pool()
+        pool = payload.get("pool") if isinstance(payload.get("pool"), dict) else {}
+        if not pool:
+            return {"success": False, "skipped": True, "message": "奖池信息缺失"}
+        if pool.get("can_draw") is not True:
+            return {
+                "success": False,
+                "skipped": True,
+                "message": str(pool.get("can_draw_reason") or "今日奖池不可领取"),
+            }
+        pool_id = int(pool.get("id") or 0)
+        if pool_id <= 0:
+            return {"success": False, "skipped": True, "message": "奖池标识缺失"}
+        result = self.request_json(
+            "POST", "/api/app/checkin/bonus-pool/draw/", json={"pool_id": pool_id}
+        )
+        updated = result.get("pool") if isinstance(result.get("pool"), dict) else {}
+        my_draw = (
+            updated.get("my_draw") if isinstance(updated.get("my_draw"), dict) else {}
         )
         return {
+            "success": True,
+            "skipped": False,
+            "title": str(updated.get("title") or pool.get("title") or ""),
+            "award_points": int(my_draw.get("reward_points") or 0),
+            "balance_after": my_draw.get("balance_after"),
+            "message": str(result.get("message") or "幸运积分已到账"),
+        }
+
+    def _signin_normal(self) -> Dict[str, Any]:
+        """普通签到：先读状态，未签到再执行。"""
+        stats_before = self.get_checkin_stats()
+        if bool(stats_before.get("checked_today")):
+            return {
+                "success": True,
+                "already_checked_in": True,
+                "status": "今日已签到",
+                "message": "今天已经签到",
+                "reward_points": stats_before.get("reward_points"),
+                "signin_days": stats_before.get("my_total_days"),
+            }
+        payload: Dict[str, Any] = {}
+        try:
+            payload = self.request_json("POST", "/api/app/checkin/do/")
+        except JuyingError:
+            if not self.get_checkin_stats().get("checked_today"):
+                raise
+        return {
+            "success": True,
+            "already_checked_in": False,
+            "status": "签到成功",
+            "message": str(payload.get("message") or "签到成功"),
+            "reward_points": stats_before.get("reward_points"),
+            "signin_days": self.get_checkin_stats().get("my_total_days"),
+        }
+
+    def _signin_luck(self) -> Dict[str, Any]:
+        """幸运签到：最高 +50、最多扣 5，与普通签到每日二选一。"""
+        stats = self.get_luck_stats()
+        draw = stats.get("draw") if isinstance(stats.get("draw"), dict) else {}
+        if draw:
+            delta = int(draw.get("delta") or 0)
+            return {
+                "success": True,
+                "already_checked_in": True,
+                "status": "今日已完成幸运签到",
+                "message": f"今日幸运签到结果 {delta:+d} 积分",
+                "delta": delta,
+                "balance_after": stats.get("user_points"),
+            }
+        try:
+            payload = self.draw_luck()
+        except JuyingError as error:
+            if error.code == "juying_luck_unavailable":
+                # 今日已选择普通签到：记为已签到，不当作失败
+                return {
+                    "success": True,
+                    "already_checked_in": True,
+                    "status": "今日已签到",
+                    "message": str(error),
+                }
+            raise
+        draw = payload.get("draw") if isinstance(payload.get("draw"), dict) else {}
+        delta = int(draw.get("delta") or 0)
+        return {
+            "success": True,
+            "already_checked_in": False,
+            "status": "幸运签到成功",
+            "message": str(payload.get("message") or f"幸运签到 {delta:+d} 积分"),
+            "delta": delta,
+            "balance_after": payload.get("user_points"),
+        }
+
+    def checkin(self, mode: str = "normal") -> Dict[str, Any]:
+        """执行聚影每日签到（普通/幸运二选一），随后领取当日签到幸运奖池。"""
+        normalized_mode = str(mode or "normal").strip().lower()
+        if normalized_mode not in {"normal", "lucky"}:
+            raise JuyingError("聚影签到模式无效", "invalid_mode")
+        before = self.get_account_info()
+        signin = (
+            self._signin_luck()
+            if normalized_mode == "lucky"
+            else self._signin_normal()
+        )
+        bonus: Dict[str, Any] = {}
+        if signin.get("success"):
+            try:
+                bonus = self.claim_bonus_pool()
+            except JuyingError as error:
+                bonus = {"success": False, "skipped": True, "message": str(error)}
+        try:
+            after = self.get_account_info()
+        except JuyingError:
+            # 账户接口失败时退回签到/奖池返回的余额，避免误判积分变化
+            after = dict(before)
+            balance = bonus.get("balance_after") or signin.get("balance_after")
+            if balance is not None:
+                after["points"] = balance
+
+        points_before = int(before.get("points") or 0)
+        points_after = int(after.get("points") or 0)
+        if signin.get("already_checked_in"):
+            signin_points = 0
+        else:
+            signin_points = int(
+                signin.get("delta", signin.get("reward_points")) or 0
+            )
+
+        parts = [
+            str(signin.get("status") or ("签到成功" if signin.get("success") else "签到失败"))
+        ]
+        if bonus.get("success"):
+            parts.append(f"签到奖池 +{int(bonus.get('award_points') or 0)} 积分")
+        elif not bonus.get("skipped") and bonus.get("message"):
+            parts.append(f"奖池未领取：{bonus.get('message')}")
+        success = bool(signin.get("success"))
+        return {
             "success": success,
-            "already_checked_in": already_checked_in,
-            "status": status,
-            "message": str(
-                payload.get("message")
-                or status
-            ),
-            "mode": "normal",
-            "signin_points": 0 if already_checked_in else reward_points,
+            "already_checked_in": bool(signin.get("already_checked_in")),
+            "status": str(signin.get("status") or ("签到成功" if success else "签到失败")),
+            "message": "；".join(part for part in parts if part),
+            "mode": normalized_mode,
+            "signin_points": signin_points,
             "points_change": points_after - points_before,
             "points_before": points_before,
             "points_after": points_after,
-            "signin_days": int(
-                stats_after.get("my_total_days")
-                or after.get("checkin_days")
-                or 0
-            ),
+            "signin_days": int(signin.get("signin_days") or after.get("checkin_days") or 0),
             "status_code": 200,
             "error_code": "",
         }

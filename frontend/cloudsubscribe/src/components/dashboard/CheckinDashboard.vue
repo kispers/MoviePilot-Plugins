@@ -183,13 +183,14 @@ function statusColor(tone) {
   )
 }
 
-function modeLabel(mode) {
-  return { gambler: "赌狗签到", lucky: "运气签到" }[mode] || "普通签到"
+function modeLabel(mode, label) {
+  // 模式文案由渠道自描述（后端下发 mode_label），前端不再维护映射表
+  return String(label || "").trim() || String(mode || "").trim() || "签到"
 }
 
 function channelMeta(channel) {
   const executedAt = channel.today?.executed_at || channel.latest?.executed_at
-  if (!executedAt) return modeLabel(channel.mode)
+  if (!executedAt) return modeLabel(channel.mode, channel.mode_label)
   const date = new Date(executedAt)
   const time = Number.isNaN(date.getTime())
     ? String(executedAt)
@@ -198,7 +199,7 @@ function channelMeta(channel) {
         hour: "2-digit",
         minute: "2-digit",
       })
-  return `${modeLabel(channel.mode)} · ${time}`
+  return `${modeLabel(channel.mode, channel.mode_label)} · ${time}`
 }
 
 function balanceText(channel) {

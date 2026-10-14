@@ -464,6 +464,7 @@ class CheckinService(OwnerDelegator):
             "enabled": enabled,
             "configured": configured,
             "mode": self._checkin_mode(provider),
+            "mode_label": provider.mode_label(self._checkin_mode(provider)),
             "status": status,
             "today": self._public_record(today_record) if today_record else None,
             "latest": self._public_record(records[-1]) if records else None,
@@ -555,10 +556,7 @@ class CheckinService(OwnerDelegator):
         delta_text = (
             f"{points_change:+d}" if points_change is not None else "未知"
         )
-        mode = {
-            "gambler": "赌狗签到",
-            "lucky": "运气签到",
-        }.get(record.get("mode"), "普通签到")
+        mode = provider.mode_label(record.get("mode"))
         lines = [
             f"模式：{mode}",
             f"状态：{record.get('status') or '未知'}",

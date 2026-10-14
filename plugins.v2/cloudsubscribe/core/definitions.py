@@ -126,18 +126,14 @@ class GroupSpec:
         return data
 
 
-#: 签到模式在配置表单中的统一文案；未声明的模式回落到原始 key。
-CHECKIN_MODE_LABELS: Dict[str, str] = {
-    "normal": "普通签到",
-    "lucky": "运气签到",
-    "gambler": "赌狗签到",
-}
-
-
-def checkin_mode_options(modes: Sequence[str]) -> List[Dict[str, Any]]:
-    """生成签到模式下拉选项，保证各渠道文案与顺序一致。"""
+def checkin_mode_options(
+        modes: Sequence[str],
+        labels: Optional[Mapping[str, str]] = None,
+) -> List[Dict[str, Any]]:
+    """按渠道自描述的模式文案生成下拉选项；未声明文案的模式回落到模式标识。"""
+    mapping = labels or {}
     return [
-        {"title": CHECKIN_MODE_LABELS.get(mode, mode), "value": mode}
+        {"title": str(mapping.get(mode) or mode), "value": mode}
         for mode in modes
     ]
 
@@ -153,6 +149,8 @@ class CheckinDefinition:
     credential_keys: Tuple[str, ...] = ()
     error_types: Tuple[Type[Exception], ...] = (Exception,)
     modes: Tuple[str, ...] = ("normal",)
+    #: 渠道自定义的模式文案（如 lucky -> 幸运签到）；未声明的模式直接展示标识。
+    mode_labels: Mapping[str, str] = field(default_factory=dict)
     order: int = 100
     group: Optional[GroupSpec] = None
     points_label: str = "积分"
@@ -163,6 +161,7 @@ class CheckinDefinition:
     hint: Union[str, Callable[[Any], str]] = ""
     #: 自定义凭据判定，缺省按 credential_attrs 判断。
     ready: Optional[Callable[[Any], bool]] = None
+
     @property
     def enabled_key(self) -> str:
         return f"{self.key}_checkin_enabled"
@@ -189,6 +188,11 @@ class CheckinDefinition:
     def default_mode(self) -> str:
         return self.modes[0] if self.modes else "normal"
 
+    def mode_label(self, mode: str) -> str:
+        """取渠道自定义的模式文案，未声明时回落到模式标识。"""
+        key = str(mode or "").strip().lower()
+        return str(self.mode_labels.get(key) or key)
+
     def to_provider_spec(self) -> Dict[str, Any]:
         """供前端 checkin-timeline 消费的提供者规格。"""
         return {
@@ -201,6 +205,7 @@ class CheckinDefinition:
             "pointsLabel": self.points_label,
             "trackDays": self.track_days,
         }
+
 
 def build_checkin_definition(
         definition_cls: Any,
@@ -218,14 +223,14 @@ def build_checkin_definition(
         credential_keys: Sequence[str] = (),
         error_types: Sequence[Type[Exception]] = (Exception,),
         modes: Sequence[str] = ("normal",),
+        mode_labels: Optional[Mapping[str, str]] = None,
         points_label: str = "积分",
         track_days: bool = True,
         enable_label: str = "启用每日签到",
         enable_hint: str = "",
         enable_cols: int = 4,
         mode_label: str = "签到模式",
-        mode_hint: str = "",
-        mode_cols: int = 8,
+        group_hint: str = "",
         fields: Sequence[FieldSpec] = (),
 ) -> CheckinDefinition:
     """按渠道自描述自动补齐签到契约与通用表单字段。
@@ -249,14 +254,24 @@ def build_checkin_definition(
         for mode in modes
         if str(mode or "").strip()
     )) or ("normal",)
+    resolved_labels = {
+        str(key or "").strip().lower(): str(value or "").strip()
+        for key, value in dict(mode_labels or {}).items()
+        if str(key or "").strip() and str(value or "").strip()
+    }
 
+    resolved_enable_cols = max(1, min(int(enable_cols or 4), 12))
+    if len(resolved_modes) > 1:
+        # 开关与模式选择固定同排：两者列宽互补，任一渠道改宽都不会把选择框挤到下一行
+        # （outlined 标签换行后会被上一行压住），因此这里由开关列宽推导选择框列宽。
+        resolved_enable_cols = min(resolved_enable_cols, 8)
     group_fields: List[FieldSpec] = [
         FieldSpec(
             key=f"{resolved_key}_checkin_enabled",
             label=enable_label,
             type="switch",
             hint=enable_hint,
-            cols=enable_cols,
+            cols=resolved_enable_cols,
         )
     ]
     if len(resolved_modes) > 1:
@@ -264,14 +279,14 @@ def build_checkin_definition(
             key=f"{resolved_key}_checkin_mode",
             label=mode_label,
             type="select",
-            options=checkin_mode_options(resolved_modes),
-            hint=mode_hint,
-            cols=mode_cols,
+            options=checkin_mode_options(resolved_modes, resolved_labels),
+            cols=12 - resolved_enable_cols,
             show_condition=f"config.{resolved_key}_checkin_enabled",
         ))
     group_fields.extend(fields)
 
     return CheckinDefinition(
+        mode_labels=resolved_labels,
         key=resolved_key,
         name=resolved_name,
         icon=resolved_icon,
@@ -286,6 +301,7 @@ def build_checkin_definition(
             tab="checkin",
             title=str(group_title or f"{resolved_name} 签到"),
             icon=str(group_icon or resolved_icon),
+            hint=str(group_hint or ""),
             fields=group_fields,
         ),
         drive_key=str(drive_key or ""),

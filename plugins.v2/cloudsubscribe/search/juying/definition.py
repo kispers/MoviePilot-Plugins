@@ -54,8 +54,11 @@ class JuyingSourceDefinition(SearchSourceDefinition):
             credential_attrs=("_juying_username", "_juying_password"),
             credential_keys=("juying_username", "juying_password"),
             error_types=(JuyingError,),
+            modes=("normal", "lucky"),
+            mode_labels={"normal": "普通签到", "lucky": "幸运签到"},
+            group_hint="每日二选一：最高 +50 / 最多 -5，签到后自动领奖池",
             group_title="聚影签到",
-            enable_cols=12,
+            enable_cols=4,
         )
 
     @classmethod
