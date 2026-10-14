@@ -216,6 +216,13 @@ class MoviePilotRegistration(OwnerDelegator):
                 "summary": "使用页面输入测试单个搜索渠道",
             },
             {
+                "path": "/search/rebuild",
+                "endpoint": self.api_vue_rebuild_search_source,
+                "methods": ["POST"],
+                "auth": "bear",
+                "summary": "清空并全量重建指定搜索渠道的本地索引",
+            },
+            {
                 "path": "/search/proxy/test",
                 "endpoint": self.api_vue_test_search_proxy,
                 "methods": ["POST"],

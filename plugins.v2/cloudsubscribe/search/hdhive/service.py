@@ -20,6 +20,13 @@ from .web import (
 )
 from ..budget import PointBudgetLedger
 from ..http_client import RequestGateCooldown
+from ..types import (
+    PREVIEW_PROVIDER_KEYS,
+    normalize_resource_type,
+    preview_item,
+    resource_type_from_url,
+    resource_type_name,
+)
 from ...core import OwnerDelegator, SearchQuery, format_search_label
 from ...core.media import tmdb_id_of
 from ...utils.cache import create_platform_ttl_cache
@@ -31,8 +38,9 @@ class HDHiveSearchService(OwnerDelegator):
 
     _HISTORY_KEY = "hdhive_sub_points_history"
 
-    def __init__(self, owner):
+    def __init__(self, owner, drive_registry: Any = None):
         super().__init__(owner)
+        object.__setattr__(self, "_drive_registry", drive_registry)
         cache_identity = f"{owner._hdhive_query_mode}:{owner._hdhive_username}"
         unlocked_cache = create_platform_ttl_cache(
             "search:hdhive_unlocked_urls",
@@ -632,6 +640,85 @@ class HDHiveSearchService(OwnerDelegator):
             ),
             log_prefix=search_prefix,
         )
+
+    def preview_files(self, payload: Mapping[str, Any]) -> Dict[str, Any]:
+        """渠道自有预览：未解锁只读列出 file-list；已解锁先解锁再回传分享目录内容。"""
+        payload = dict(payload or {})
+        provider_data = dict(payload.get("provider_data") or {})
+        resource_ref = str(payload.get("resource_ref") or "").strip()
+        resource_type = normalize_resource_type(payload.get("resource_type"))
+        if (
+                not resource_ref
+                or resource_type not in HDHIVE_DETAIL_RESOURCE_TYPES
+                or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", resource_ref)
+        ):
+            return {"success": False, "message": "HDHive 资源标识或类型无效"}
+
+        is_unlocked = bool(payload.get("is_unlocked"))
+        search_label = "测试已解锁预览" if is_unlocked else "测试只读预览"
+        candidate = {
+            "resource_ref": resource_ref,
+            "resource_type": resource_type,
+            "unlock_points": 0,
+            "is_unlocked": is_unlocked,
+            "target_season": payload.get("target_season"),
+            "target_episodes": payload.get("target_episodes"),
+            "supports_file_preview": payload.get("supports_file_preview"),
+            "provider_data": provider_data,
+            "search_label": search_label,
+        }
+
+        if not is_unlocked:
+            preview = self.preview(candidate)
+            files = [
+                {**preview_item(item), "can_enter": False}
+                for item in (preview.get("files") or [])
+            ][:500]
+            return {
+                "success": True,
+                "message": f"只读预览到 {len(files)} 个项目，未执行解锁",
+                "data": {
+                    "items": files,
+                    "count": len(files),
+                    "provider_name": "HDHive",
+                    "resource_type": resource_type,
+                    "resource_type_name": resource_type_name(resource_type, "HDHive"),
+                    "share_url": "",
+                    "parent_id": "",
+                    "preview_episodes": preview.get("preview_episodes") or {},
+                    "covers_target": preview.get("covers_target"),
+                    "resource_validate_status": preview.get("resource_validate_status") or "",
+                    "resource_validate_message": preview.get("resource_validate_message") or "",
+                },
+            }
+
+        share_url = str(
+            self.unlock(candidate, search_label=search_label) or ""
+        ).strip()
+        if not share_url:
+            raise HDHiveWebError("HDHive 已解锁资源页未解析到分享链接")
+        target_type = normalize_resource_type(
+            resource_type_from_url(share_url)
+        ) or resource_type
+        provider_name, service = self._drive_registry.require_share_transfer(
+            PREVIEW_PROVIDER_KEYS.get(target_type)
+        )
+        rows = service.list_share_directory(share_url, parent_id="") or []
+        files = [preview_item(item) for item in rows][:500]
+        return {
+            "success": True,
+            "message": f"已解锁并读取到 {len(files)} 个项目",
+            "data": {
+                "items": files,
+                "count": len(files),
+                "provider_name": provider_name,
+                "resource_type": target_type,
+                "resource_type_name": resource_type_name(target_type, provider_name),
+                "share_url": share_url,
+                "parent_id": "",
+                "covers_target": candidate.get("target_episodes") is not None,
+            },
+        }
 
     def unlock(
             self,

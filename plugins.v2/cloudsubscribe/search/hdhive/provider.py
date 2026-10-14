@@ -13,6 +13,7 @@ def create_hdhive_provider(service: HDHiveSearchService) -> SearchProvider:
         services={
             SearchCapability.RESOURCE_SEARCH: service,
             SearchCapability.RESOURCE_PREVIEW: service,
+            SearchCapability.RESOURCE_FILE_PREVIEW: service,
             SearchCapability.RESOURCE_UNLOCK: service,
             SearchCapability.ACCOUNT: client,
             SearchCapability.CHECKIN: client,

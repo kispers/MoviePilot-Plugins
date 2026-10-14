@@ -60,6 +60,7 @@ def _member_profile(member: Dict[str, Any]) -> Dict[str, Any]:
 class QuarkClient:
     BASE_URL = "https://drive-pc.quark.cn/1/clouddrive"
     SHARE_PAGE_BASE_URL = "https://drive-h.quark.cn/1/clouddrive"
+    SHARE_SEARCH_BASE_URL = "https://api-album.quark.cn/api/share/file/search"
     SHARE_BASE_URL = "https://drive.quark.cn/1/clouddrive"
     PAN_CLOUDDRIVE_URL = "https://pan.quark.cn/1/clouddrive"
     CHECKIN_BASE_URL = "https://drive-m.quark.cn"

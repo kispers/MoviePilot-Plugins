@@ -4,8 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
 from threading import BoundedSemaphore, local
-from typing import Any, Callable, ClassVar, Dict, FrozenSet, Iterable, Iterator, Mapping, Optional, Protocol, \
-    runtime_checkable
+from typing import Any, Callable, ClassVar, Dict, FrozenSet, Iterable, Iterator, Mapping, Optional, Protocol, Tuple, runtime_checkable
 
 
 class CloudDriveCapability(str, Enum):
@@ -364,6 +363,7 @@ class FileDownloadOperations(Protocol):
             download_threads: int = 5,
     ) -> str: ...
 
+
 @runtime_checkable
 class QrCodeAuthOperations(Protocol):
     def create_qrcode_login(self, client_type: str) -> Dict[str, Any]: ...
@@ -575,3 +575,15 @@ class CloudDriveRegistry:
 
     def available(self) -> list:
         return list(self._providers.values())
+
+    def require_share_transfer(self, provider_key: str) -> Tuple[str, Any]:
+        """解析网盘分享读取服务，返回 (网盘名, 服务)。 """
+        if not provider_key:
+            raise RuntimeError("当前资源类型暂不支持内容预览")
+        try:
+            provider = self.get(provider_key)
+        except KeyError as error:
+            raise RuntimeError("对应网盘未配置或不支持分享预览") from error
+        if not provider.supports(CloudDriveCapability.SHARE_TRANSFER):
+            raise RuntimeError("对应网盘未配置或不支持分享预览")
+        return provider.name, provider.require(CloudDriveCapability.SHARE_TRANSFER)

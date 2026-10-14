@@ -48,11 +48,13 @@ class AccountApi(OwnerDelegator):
         def add_detail(label: str, value: Any) -> None:
             if value is None or value == "" or label in seen_labels:
                 return
-            val_str = str(value).strip().replace("T", " ")
-            if val_str.endswith("Z"):
-                val_str = val_str[:-1].strip()
-            if "." in val_str:
-                val_str = val_str.split(".")[0].strip()
+            val_str = str(value).strip()
+            if "T" in val_str and ("Z" in val_str or "-" in val_str):
+                val_str = val_str.replace("T", " ")
+                if val_str.endswith("Z"):
+                    val_str = val_str[:-1].strip()
+                if "." in val_str:
+                    val_str = val_str.split(".")[0].strip()
             if val_str:
                 details.append({"label": label, "value": val_str})
                 seen_labels.add(label)
@@ -141,7 +143,7 @@ class AccountApi(OwnerDelegator):
             "details": details,
         }
 
-    def _load_search_account(self, source: str) -> Dict[str, Any]:
+    def _load_search_account(self, source: str, force: bool = False) -> Dict[str, Any]:
         """读取单个搜索渠道的账户信息。"""
         source = str(source or "").strip().lower()
         registry = getattr(getattr(self, "_search_handler", None), "_search_registry", None)
@@ -168,7 +170,14 @@ class AccountApi(OwnerDelegator):
                     "connected": False,
                     "error": "渠道授权尚未完成，请先保存配置并授权",
                 }
-            info = client.get_account_info()
+            getter = client.get_account_info
+            parameters = inspect.signature(getter).parameters
+            if "force" in parameters:
+                info = getter(force=force)
+            elif "refresh" in parameters:
+                info = getter(refresh=force)
+            else:
+                info = getter()
             return self._search_account_card(source, info)
         except Exception as error:
             logger.debug(f"读取{source}搜索账户信息失败：{error}")
@@ -229,7 +238,7 @@ class AccountApi(OwnerDelegator):
         account = (
             self._load_drive_account(source, force=refresh)
             if category == "drive"
-            else self._load_search_account(source)
+            else self._load_search_account(source, force=refresh)
         )
         account["refreshed_at"] = int(time.time())
         with _ACCOUNT_INFO_LOCK:

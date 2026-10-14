@@ -14,6 +14,7 @@ def create_hdhaven_provider(service: HDHavenSearchService) -> SearchProvider:
         services={
             SearchCapability.RESOURCE_SEARCH: service,
             SearchCapability.RESOURCE_PREVIEW: service,
+            SearchCapability.RESOURCE_FILE_PREVIEW: service,
             SearchCapability.RESOURCE_UNLOCK: service,
             SearchCapability.ACCOUNT: client,
             SearchCapability.CHECKIN: client,

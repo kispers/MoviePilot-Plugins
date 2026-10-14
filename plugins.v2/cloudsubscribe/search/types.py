@@ -1,6 +1,7 @@
 """搜索渠道共享的资源类型定义。"""
 
 import re
+from typing import Any, Dict, Mapping
 from urllib.parse import urlparse
 
 TYPE_ALIASES = {
@@ -218,3 +219,38 @@ def append_share_password(resource_type: str, target: str, password: str) -> str
     ):
         return target
     return f"{target}{'&' if '?' in str(target) else '?'}{key}={password}"
+
+
+def common_parent_id(rows: Any) -> str:
+    """取若干条目共同的非空父目录标识，用于回退到条目所在目录。"""
+    parents = {
+        str((row or {}).get("parent_id") or (row or {}).get("pdir_fid") or "").strip()
+        for row in (rows or [])
+        if isinstance(row, Mapping)
+    }
+    parents.discard("")
+    return parents.pop() if len(parents) == 1 else ""
+
+
+def preview_item(item: Any) -> Dict[str, Any]:
+    """把网盘/渠道条目归一为前端统一的预览条目结构。"""
+    if not isinstance(item, dict):
+        item = getattr(item, "__dict__", {}) or {}
+    name = next((str(item.get(key) or "").strip() for key in
+                 ("name", "path", "file_name", "filename", "fileName")
+                 if item.get(key)), "")
+    size = next((item.get(key) for key in
+                 ("size", "file_size", "fileSize")
+                 if item.get(key) is not None), 0)
+    is_dir = bool(item.get("is_dir") or item.get("is_folder")
+                  or item.get("isDirectory") or item.get("type") == "folder")
+    file_id = next((str(item.get(key) or "").strip() for key in
+                    ("id", "file_id", "fileId", "fid", "cid")
+                    if item.get(key) is not None), "")
+    return {
+        "id": file_id,
+        "name": name or "未命名文件",
+        "size": size or 0,
+        "is_dir": is_dir,
+        "can_enter": bool(is_dir and file_id),
+    }

@@ -420,7 +420,9 @@ class HDHiveSourceDefinition(SearchSourceDefinition):
         if not hdhive_service and ctx.get("owner"):
             try:
                 from .service import HDHiveSearchService
-                hdhive_service = HDHiveSearchService(ctx["owner"])
+                hdhive_service = HDHiveSearchService(
+                    ctx["owner"], ctx.get("drive_registry")
+                )
             except Exception:
                 hdhive_service = None
         if hdhive_service and getattr(hdhive_service, "available", False):

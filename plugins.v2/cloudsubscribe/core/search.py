@@ -27,6 +27,7 @@ class SearchCapability(str, Enum):
     RESOURCE_SEARCH = "resource_search"
     RESOURCE_RESOLVE = "resource_resolve"
     RESOURCE_PREVIEW = "resource_preview"
+    RESOURCE_FILE_PREVIEW = "resource_file_preview"
     RESOURCE_UNLOCK = "resource_unlock"
     ACCOUNT = "account"
     CHECKIN = "checkin"
@@ -178,6 +179,13 @@ class ResourcePreviewOperations(Protocol):
 
 
 @runtime_checkable
+class ResourceFilePreviewOperations(Protocol):
+    """渠道级文件预览契约：按渠道自身数据形态返回可展示的文件列表。"""
+
+    def preview_files(self, payload: Mapping[str, Any]) -> Dict[str, Any]: ...
+
+
+@runtime_checkable
 class ResourceUnlockOperations(Protocol):
     def unlock(
             self, candidate: Mapping[str, Any], search_label: str = ""
@@ -227,6 +235,7 @@ CAPABILITY_CONTRACTS = {
     SearchCapability.RESOURCE_SEARCH: ResourceSearchOperations,
     SearchCapability.RESOURCE_RESOLVE: ResourceResolveOperations,
     SearchCapability.RESOURCE_PREVIEW: ResourcePreviewOperations,
+    SearchCapability.RESOURCE_FILE_PREVIEW: ResourceFilePreviewOperations,
     SearchCapability.RESOURCE_UNLOCK: ResourceUnlockOperations,
     SearchCapability.ACCOUNT: SearchAccountOperations,
     SearchCapability.CHECKIN: SearchCheckinOperations,
@@ -315,6 +324,12 @@ class SearchProvider:
     def preview(self, candidate: Mapping[str, Any]) -> SearchCandidate:
         row = self.require(SearchCapability.RESOURCE_PREVIEW).preview(candidate)
         return normalize_search_candidate(row or {}, self.key)
+
+    def preview_files(self, payload: Mapping[str, Any]) -> Dict[str, Any]:
+        row = self.require(SearchCapability.RESOURCE_FILE_PREVIEW).preview_files(
+            payload
+        )
+        return dict(row or {})
 
     def unlock(
             self, candidate: Mapping[str, Any], search_label: str = ""

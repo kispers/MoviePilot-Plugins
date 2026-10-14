@@ -50,11 +50,16 @@ def create_search_registry(
             if clean_key not in config:
                 config[clean_key] = val
     resource_types = tuple(getattr(owner, "_resource_type_order_config", ()) or config.get("resource_type_order", ()))
+    drive_registry = (
+        getattr(owner, "_cloud_drive_registry", None)
+        or getattr(plugin, "_cloud_drive_registry", None)
+    )
     context = {
         "owner": owner,
         "storage_owner": plugin or getattr(owner, "_plugin", None) or owner,
         "resource_types": resource_types,
         "proxy": getattr(owner, "_search_proxy", None) or config.get("search_proxy"),
+        "drive_registry": drive_registry,
         **extra_context,
     }
 
@@ -72,5 +77,5 @@ def create_search_registry(
             logger.debug(f"搜索渠道 [{def_cls.id}] 注册失败：{_err}")
 
     if skipped:
-        logger.debug(f"未配置搜索渠道已跳过：{', '.join(skipped)}")
+        logger.debug(f"以下搜索渠道未配置凭据，本次不参与搜索：{', '.join(skipped)}")
     return registry

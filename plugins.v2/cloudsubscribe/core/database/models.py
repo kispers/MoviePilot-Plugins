@@ -153,3 +153,13 @@ class AuthSession(CloudSubscribeBase):
     updated_at: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     expires_at: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     payload: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class PluginConfigRecord(CloudSubscribeBase):
+    """插件自身配置（含各网盘凭据），单行存储，完全脱离平台配置存储。"""
+
+    __tablename__ = "plugin_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    updated_at: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    payload: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)

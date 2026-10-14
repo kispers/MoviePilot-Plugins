@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from threading import RLock
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 from app.log import logger
 
@@ -167,6 +167,19 @@ class CloudSubscribeDataStore:
     def save_account(self, account_key: str, value: Dict[str, Any]) -> None:
         self.initialize()
         self.repositories.account.save_account(account_key, value)
+
+    def load_config(self) -> Dict[str, Any]:
+        self.initialize()
+        return self.repositories.config.load()
+
+    def save_config(self, config: Mapping[str, Any]) -> None:
+        self.initialize()
+        self.repositories.config.save(dict(config or {}))
+
+    def config_updated_at(self) -> int:
+        """配置最后写入时间，0 表示独立库中尚无配置。"""
+        self.initialize()
+        return self.repositories.config.updated_at()
 
     def close(self) -> None:
         self.manager.close()

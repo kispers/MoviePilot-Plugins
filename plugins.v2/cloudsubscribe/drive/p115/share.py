@@ -2,6 +2,7 @@
 
 import copy
 import time
+from itertools import islice
 from typing import Any, Dict, List, Tuple
 
 from app.log import logger
@@ -11,7 +12,7 @@ from ...core.cloud import ShareLinkStatus
 from ...core.delegation import OwnerDelegator
 
 try:
-    from p115client.tool.iterdir import share_iterdir
+    from p115client.tool.iterdir import share_iterdir, share_search_iter
     from p115client.util import share_extract_payload
 
     P115_AVAILABLE = True
@@ -283,6 +284,47 @@ class ShareService(OwnerDelegator):
         return [
             {
                 "id": str(item.get("id") or ""),
+                "parent_id": str(item.get("parent_id") or ""),
+                "name": str(item.get("name") or ""),
+                "size": int(item.get("size") or 0),
+                "is_dir": bool(item.get("is_dir")),
+                "sha1": str(item.get("sha1") or ""),
+            }
+            for item in rows
+        ]
+
+    def search_share_files(
+            self, share_url: str, keyword: str, limit: int = 200
+    ) -> List[dict]:
+        """在分享内按关键词服务端搜索文件，适用于超大合集（免逐层遍历）。"""
+        if not P115_AVAILABLE:
+            raise RuntimeError("p115client 未安装")
+        if not self.client:
+            raise RuntimeError("115 客户端未初始化，请先配置 Cookies")
+        text = str(keyword or "").strip()
+        if not text:
+            raise ValueError("搜索关键词不能为空")
+        info = self.extract_share_info(share_url)
+        share_code = info.get("share_code")
+        receive_code = info.get("receive_code")
+        if not share_code or not receive_code:
+            raise ValueError("无效的 115 分享链接或缺少提取码")
+        rows = self.rate_limiter.call(
+            lambda: list(islice(
+                share_search_iter(
+                    self.client,
+                    share_code=share_code,
+                    receive_code=receive_code,
+                    search_value=text,
+                    page_size=115,
+                ),
+                max(1, int(limit)),
+            ))
+        )
+        return [
+            {
+                "id": str(item.get("id") or ""),
+                "parent_id": str(item.get("parent_id") or ""),
                 "name": str(item.get("name") or ""),
                 "size": int(item.get("size") or 0),
                 "is_dir": bool(item.get("is_dir")),

@@ -16,7 +16,12 @@ from .resource import (
     valid_share_url,
 )
 from ..budget import PointBudgetLedger
-from ..types import SUPPORTED_CLOUD_TYPES
+from ..types import (
+    SUPPORTED_CLOUD_TYPES,
+    normalize_resource_type,
+    preview_item,
+    resource_type_name,
+)
 from ...core import OwnerDelegator, SearchQuery, format_search_label
 from ...core.media import tmdb_id_of
 from ...utils.cache import create_platform_ttl_cache
@@ -253,6 +258,57 @@ class HDHavenSearchService(OwnerDelegator):
                     "cooldown_message": str(err),
                 }
             raise
+
+    def preview_files(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """渠道自有预览：只读列出 HDHaven 文件列表，未解锁时降级为集数范围说明。"""
+        payload = dict(payload or {})
+        resource_ref = str(payload.get("resource_ref") or "").strip()
+        resource_type = normalize_resource_type(payload.get("resource_type"))
+        candidate = {
+            "resource_ref": resource_ref,
+            "slug": resource_ref,
+            "id": resource_ref,
+            "resource_type": resource_type,
+            "unlock_points": int(payload.get("unlock_points") or 0),
+            "is_unlocked": bool(payload.get("is_unlocked")),
+            "episode_range": str(payload.get("episode_range") or ""),
+            "raw_item": dict(payload.get("raw_item") or {}),
+            "target_season": payload.get("target_season"),
+            "target_episodes": payload.get("target_episodes"),
+            "supports_file_preview": payload.get("supports_file_preview"),
+            "provider_data": dict(payload.get("provider_data") or {}),
+            "search_label": "测试只读预览",
+        }
+        preview = self.preview(candidate)
+        files = [
+            {**preview_item(item), "can_enter": False}
+            for item in (preview.get("files") or [])
+        ][:500]
+        episode_range_str = str(payload.get("episode_range") or "").strip()
+        if files:
+            message = f"只读预览到 {len(files)} 个文件，未执行解锁"
+        elif episode_range_str:
+            message = f"资源需先解锁才可预览文件，集数范围：{episode_range_str}"
+        else:
+            message = "资源需先解锁才可预览文件"
+        return {
+            "success": True,
+            "message": message,
+            "data": {
+                "items": files,
+                "count": len(files),
+                "provider_name": "HDHaven",
+                "resource_type": resource_type,
+                "resource_type_name": resource_type_name(resource_type, "HDHaven"),
+                "share_url": "",
+                "parent_id": "",
+                "preview_episodes": preview.get("preview_episodes") or {},
+                "covers_target": preview.get("covers_target"),
+                "resource_validate_status": preview.get("resource_validate_status") or "",
+                "resource_validate_message": preview.get("resource_validate_message")
+                or (f"集数范围：{episode_range_str}" if episode_range_str else ""),
+            },
+        }
 
     def unlock(self, candidate: Any, search_label: str = "") -> str:
         resource = dict(candidate or {})

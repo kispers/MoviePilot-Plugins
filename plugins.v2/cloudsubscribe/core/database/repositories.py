@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import re
+import time
 from collections import defaultdict
 from threading import RLock
 from typing import Any, Dict, Iterable, List, Optional
@@ -20,6 +21,7 @@ from .models import (
     CheckinScheduleState,
     HistoryRecord,
     OfflinePendingTask,
+    PluginConfigRecord,
     PointBudgetRecord,
 )
 from ..history import history_group_key
@@ -843,6 +845,35 @@ class AuthSessionRepository(DbOper):
         }
 
 
+class PluginConfigRepository(DbOper):
+
+    @db_update
+    def save(self, payload: Dict[str, Any], db: Session = None) -> None:
+        values = {
+            "id": 1,
+            "updated_at": int(time.time()),
+            "payload": copy.deepcopy(dict(payload or {})),
+        }
+        statement = sqlite_insert(PluginConfigRecord).values(**values)
+        db.execute(statement.on_conflict_do_update(
+            index_elements=[PluginConfigRecord.id],
+            set_={
+                key: getattr(statement.excluded, key)
+                for key in values if key != "id"
+            },
+        ))
+
+    @db_query
+    def load(self, db: Session = None) -> Dict[str, Any]:
+        row = PluginConfigRecord.get(db, 1)
+        return copy.deepcopy(row.payload) if row and row.payload else {}
+
+    @db_query
+    def updated_at(self, db: Session = None) -> int:
+        row = PluginConfigRecord.get(db, 1)
+        return int(row.updated_at or 0) if row else 0
+
+
 class CloudSubscribeRepositories:
     def __init__(
             self,
@@ -856,3 +887,4 @@ class CloudSubscribeRepositories:
         self.budget = PointBudgetRepository(manager, db)
         self.account = AccountSnapshotRepository(manager, db)
         self.auth = AuthSessionRepository(manager, db)
+        self.config = PluginConfigRepository(manager, db)

@@ -209,6 +209,61 @@ class QuarkShareService:
             logger.warning(f"读取夸克分享文件失败：{error}")
             return []
 
+    def search_share_files(
+            self, share_url: str, keyword: str, limit: int = 200
+    ) -> list:
+        """分享内服务端搜索：免逐层遍历地定位超大合集里的目标文件。"""
+        text = str(keyword or "").strip()
+        if not text:
+            raise ValueError("搜索关键词不能为空")
+        info, token = self._share_access(share_url)
+        response = self.client.request(
+            "POST",
+            "",
+            params={"biz_scene": "share-search"},
+            json_data={
+                "data": {
+                    "pwd_id": info["share_id"],
+                    "stoken": token,
+                    "search_type": "",
+                    "filters": [
+                        {
+                            "key": "q",
+                            "value": [text],
+                            "channel": "submit",
+                            "channel_type": "input",
+                            "context": "",
+                        }
+                    ],
+                    "sort_by": "rel",
+                    "page": 1,
+                    "size": max(1, min(int(limit or 200), 100)),
+                    "search_version": "1",
+                }
+            },
+            base_url=self.client.SHARE_SEARCH_BASE_URL,
+            request_timeout=(3, self.client.request_timeout),
+        )
+        if response.get("code") not in (0, 2000000):
+            raise RuntimeError(
+                response.get("message")
+                or response.get("errmsg")
+                or "夸克分享内搜索失败"
+            )
+        rows = ((response.get("data") or {}).get("file_list") or [])
+        return [
+            {
+                "id": str(item.get("fid") or ""),
+                "parent_id": str(item.get("pdir_fid") or ""),
+                "name": str(item.get("file_name") or ""),
+                "size": safe_int(item.get("size")),
+                "is_dir": bool(item.get("dir")),
+                "sha1": "",
+            }
+            for item in rows
+            if item.get("fid") and item.get("file_name")
+        ]
+
     def list_share_directory(
             self, share_url: str, parent_id: str = ""
     ) -> list:

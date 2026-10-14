@@ -196,7 +196,7 @@ class TestSearchStateLifecycle(unittest.TestCase):
 
         # 检查是否聚合成单条 debug 日志包含 dummy1 和 dummy2
         debug_messages = [call.args[0] for call in mock_logger.debug.call_args_list if call.args]
-        skipped_lines = [msg for msg in debug_messages if "未配置搜索渠道已跳过" in msg]
+        skipped_lines = [msg for msg in debug_messages if "本次不参与搜索" in msg]
         self.assertEqual(len(skipped_lines), 1)
         self.assertIn("dummy1", skipped_lines[0])
         self.assertIn("dummy2", skipped_lines[0])

@@ -12,9 +12,8 @@ from app.schemas import MediaInfo
 from app.schemas.types import MediaType
 from app.utils.string import StringUtils
 
-from .page import _platform_image_url
+from .page import _platform_image_url, clear_ui_options_cache
 from .. import OwnerDelegator, SearchCapability
-from ..cloud import CloudDriveCapability
 from ..config import UIConfig
 from ..media import apply_media_identity, recognize_media, search_medias
 from ...handlers.search import SearchHandler
@@ -28,9 +27,11 @@ from ...search.types import (
     RESOURCE_TYPE_ORDER,
     RESOURCE_TYPE_PRIORITY,
     SUPPORTED_RESOURCE_TYPES,
+    common_parent_id,
     normalize_resource_type,
     resource_type_from_url,
     resource_type_name,
+    preview_item,
 )
 from ...utils import parse_magnet_metadata
 from ...utils.http_client import (
@@ -171,26 +172,20 @@ class SearchApi(OwnerDelegator):
 
     @staticmethod
     def _preview_file(item: Any) -> Dict[str, Any]:
-        if not isinstance(item, dict):
-            item = getattr(item, "__dict__", {}) or {}
-        name = next((str(item.get(key) or "").strip() for key in
-                     ("name", "path", "file_name", "filename", "fileName")
-                     if item.get(key)), "")
-        size = next((item.get(key) for key in
-                     ("size", "file_size", "fileSize")
-                     if item.get(key) is not None), 0)
-        is_dir = bool(item.get("is_dir") or item.get("is_folder")
-                      or item.get("isDirectory") or item.get("type") == "folder")
-        file_id = next((str(item.get(key) or "").strip() for key in
-                        ("id", "file_id", "fileId", "fid", "cid")
-                        if item.get(key) is not None), "")
-        return {
-            "id": file_id,
-            "name": name or "未命名文件",
-            "size": size or 0,
-            "is_dir": is_dir,
-            "can_enter": bool(is_dir and file_id),
-        }
+        return preview_item(item)
+
+    def _file_preview_provider(self, source: str):
+        """取渠道级文件预览能力；渠道未注册或未声明该能力时返回 None。"""
+        registry = getattr(getattr(self, "_search_handler", None), "_search_registry", None)
+        if not registry or not source:
+            return None
+        try:
+            provider = registry.get(source)
+        except KeyError:
+            return None
+        if not provider.supports(SearchCapability.RESOURCE_FILE_PREVIEW):
+            return None
+        return provider
 
     def api_vue_preview_search_resource(self, payload: Dict[str, Any]) -> dict:
         """只读获取测试资源的文件列表。"""
@@ -208,6 +203,7 @@ class SearchApi(OwnerDelegator):
         resource_ref = str(payload.get("resource_ref") or "").strip()
         is_unlocked = bool(payload.get("is_unlocked"))
         parent_id = str(payload.get("parent_id") or "").strip()
+        keyword = str(payload.get("keyword") or "").strip()
         raw_file_list = payload.get("file_list") or provider_data.get("file_list") or []
         if isinstance(raw_file_list, list) and raw_file_list:
             items = [
@@ -231,6 +227,13 @@ class SearchApi(OwnerDelegator):
                 },
             }
 
+        # 渠道自带文件预览能力时由渠道按其数据形态组织结果，不套用通用分享目录遍历
+        # （用户点击目录下钻时 parent_id 非空，此时回落到通用目录预览）
+        if source and not parent_id:
+            preview_provider = self._file_preview_provider(source)
+            if preview_provider is not None:
+                return dict(preview_provider.preview_files(payload) or {})
+
         pending_resolve = (
             not url
             and (
@@ -241,34 +244,14 @@ class SearchApi(OwnerDelegator):
                 )
             )
         )
-        valid_hdhive_url = bool(
-            url and "\\" not in url
-            and resource_type_from_url(url) == resource_type
-        )
-        pending_hdhive = (
-                source == "hdhive"
-                and bool(resource_ref)
-                and (not url or (is_unlocked and not valid_hdhive_url))
-        )
-        pending_hdhaven = (
-                source == "hdhaven"
-                and bool(resource_ref)
-                and not url
-        )
-        if (
-                not url and not pending_resolve and not pending_hdhive
-                and not pending_hdhaven
-        ) or len(url) > 8192:
+        if (not url and not pending_resolve) or len(url) > 8192:
             return {"success": False, "message": "资源链接无效"}
         if len(parent_id) > 256:
             return {"success": False, "message": "目录标识无效"}
+        if len(keyword) > 100:
+            return {"success": False, "message": "搜索关键词过长"}
         if pending_resolve and parent_id:
             return {"success": False, "message": "待解析资源不支持目录导航"}
-        if pending_hdhive and (
-                resource_type not in HDHIVE_DETAIL_RESOURCE_TYPES
-                or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", resource_ref)
-        ):
-            return {"success": False, "message": "HDHive 资源标识或类型无效"}
         try:
             if pending_resolve:
                 handler = self._build_test_search_handler(
@@ -297,154 +280,6 @@ class SearchApi(OwnerDelegator):
                 ) or resource_type
                 if not url:
                     raise RuntimeError("资源链接解析失败")
-            if pending_hdhive:
-                url = ""
-                if parent_id:
-                    return {
-                        "success": False,
-                        "message": "HDHive file-list 不支持目录导航",
-                    }
-                handler = self._build_test_search_handler(
-                    "hdhive",
-                    self._test_search_config("hdhive", payload.get("config")),
-                )
-                try:
-                    candidate = {
-                        "resource_ref": resource_ref,
-                        "resource_type": resource_type,
-                        "unlock_points": 0,
-                        "is_unlocked": is_unlocked,
-                        "target_season": payload.get("target_season"),
-                        "target_episodes": payload.get("target_episodes"),
-                        "supports_file_preview": payload.get(
-                            "supports_file_preview"
-                        ),
-                        "provider_data": dict(
-                            payload.get("provider_data") or {}
-                        ),
-                        "search_label": (
-                            "测试已解锁预览" if is_unlocked else "测试只读预览"
-                        ),
-                    }
-                    if is_unlocked:
-                        url = handler.unlock_resource(
-                            "hdhive", candidate,
-                            search_label="测试已解锁预览",
-                        )
-                    else:
-                        preview = handler.preview_resource(
-                            "hdhive", candidate
-                        )
-                finally:
-                    handler.close(release_cache=False)
-                if is_unlocked:
-                    url = str(url or "").strip()
-                    if not url:
-                        raise RuntimeError("HDHive 已解锁资源页未解析到分享链接")
-                else:
-                    files = [
-                        {
-                            **self._preview_file(item),
-                            "can_enter": False,
-                        }
-                        for item in (preview.get("files") or [])
-                    ][:500]
-                    return {
-                        "success": True,
-                        "message": f"只读预览到 {len(files)} 个项目，未执行解锁",
-                        "data": {
-                            "items": files,
-                            "count": len(files),
-                            "provider_name": "HDHive",
-                            "resource_type": resource_type,
-                            "resource_type_name": resource_type_name(
-                                resource_type, resource_type.upper()
-                            ),
-                            "share_url": "",
-                            "parent_id": "",
-                            "preview_episodes": preview.get("preview_episodes") or {},
-                            "covers_target": preview.get("covers_target"),
-                            "resource_validate_status": preview.get(
-                                "resource_validate_status"
-                            ) or "",
-                            "resource_validate_message": preview.get(
-                                "resource_validate_message"
-                            ) or "",
-                        },
-                    }
-            if pending_hdhaven:
-                url = ""
-                if parent_id:
-                    return {
-                        "success": False,
-                        "message": "HDHaven 预览不支持目录导航",
-                    }
-                handler = self._build_test_search_handler(
-                    "hdhaven",
-                    self._test_search_config("hdhaven", payload.get("config")),
-                )
-                try:
-                    candidate = {
-                        "resource_ref": resource_ref,
-                        "slug": resource_ref,
-                        "id": resource_ref,
-                        "resource_type": resource_type,
-                        "unlock_points": int(payload.get("unlock_points") or 0),
-                        "is_unlocked": is_unlocked,
-                        "episode_range": str(payload.get("episode_range") or ""),
-                        "raw_item": dict(payload.get("raw_item") or {}),
-                        "target_season": payload.get("target_season"),
-                        "target_episodes": payload.get("target_episodes"),
-                        "supports_file_preview": payload.get("supports_file_preview"),
-                        "provider_data": dict(payload.get("provider_data") or {}),
-                        "search_label": "测试只读预览",
-                    }
-                    preview = handler.preview_resource(
-                        "hdhaven", candidate
-                    )
-                finally:
-                    handler.close(release_cache=False)
-                files = [
-                    {
-                        **self._preview_file(item),
-                        "can_enter": False,
-                    }
-                    for item in (preview.get("files") or [])
-                ][:500]
-                file_count = len(files)
-                # 预览 403 时文件列表为空，从 episode_range 降级展示集数范围信息
-                episode_range_str = str(payload.get("episode_range") or "").strip()
-                preview_episodes = preview.get("preview_episodes") or {}
-                if file_count:
-                    msg = f"只读预览到 {file_count} 个文件，未执行解锁"
-                elif episode_range_str:
-                    msg = f"资源需先解锁才可预览文件，集数范围：{episode_range_str}"
-                else:
-                    msg = "资源需先解锁才可预览文件"
-                return {
-                    "success": True,
-                    "message": msg,
-                    "data": {
-                        "items": files,
-                        "count": file_count,
-                        "provider_name": "HDHaven",
-                        "resource_type": resource_type,
-                        "resource_type_name": resource_type_name(
-                            resource_type, resource_type.upper()
-                        ),
-                        "share_url": "",
-                        "parent_id": "",
-                        "preview_episodes": preview_episodes,
-                        "covers_target": preview.get("covers_target"),
-                        "resource_validate_status": preview.get(
-                            "resource_validate_status"
-                        ) or "",
-                        "resource_validate_message": preview.get(
-                            "resource_validate_message"
-                        ) or (f"集数范围：{episode_range_str}" if episode_range_str else ""),
-                    },
-                }
-
             if resource_type == "magnet":
                 if parent_id:
                     return {"success": False, "message": "磁力链接不支持目录导航"}
@@ -479,13 +314,45 @@ class SearchApi(OwnerDelegator):
             if "\\" in url or resource_type_from_url(url) != resource_type:
                 return {"success": False, "message": "资源链接格式或类型无效"}
 
-            provider_key = PREVIEW_PROVIDER_KEYS.get(resource_type)
-            if not provider_key or not self._cloud_drive_registry:
-                return {"success": False, "message": "当前资源类型暂不支持内容预览"}
-            provider = self._cloud_drive_registry.get(provider_key)
-            if not provider or not provider.supports(CloudDriveCapability.SHARE_TRANSFER):
-                return {"success": False, "message": "对应网盘未配置或不支持分享预览"}
-            service = provider.require(CloudDriveCapability.SHARE_TRANSFER)
+            try:
+                provider_name, service = self._cloud_drive_registry.require_share_transfer(
+                    PREVIEW_PROVIDER_KEYS.get(resource_type)
+                )
+            except RuntimeError as error:
+                return {"success": False, "message": str(error)}
+            searchable = hasattr(service, "search_share_files")
+            # 分享内服务端搜索：适用于超大合集，避免逐层遍历
+            if keyword:
+                if not searchable:
+                    return {"success": False, "message": f"{provider_name} 暂不支持分享内搜索"}
+                raw_files = service.search_share_files(url, keyword) or []
+                files = [self._preview_file(item) for item in raw_files][:500]
+                # 命中文件时带回其父目录，前端据此提供“上一级”回退
+                hit_parent = common_parent_id(raw_files)
+                return {
+                    "success": True,
+                    "message": f"“{keyword}”匹配到 {len(files)} 个项目",
+                    "data": {
+                        "items": files, "count": len(files),
+                        "provider_name": provider_name,
+                        "resource_type": resource_type,
+                        "resource_type_name": resource_type_name(
+                            resource_type, provider_name
+                        ),
+                        "share_url": url,
+                        "parent_id": hit_parent,
+                        "breadcrumbs": (
+                            [
+                                {"id": "", "name": "分享根目录"},
+                                {"id": hit_parent, "name": keyword},
+                            ]
+                            if hit_parent else []
+                        ),
+                        "keyword": keyword,
+                        "search_mode": True,
+                        "searchable": True,
+                    }
+                }
             raw_files = service.list_share_directory(url, parent_id=parent_id) or []
             files = [self._preview_file(item) for item in raw_files][:500]
             return {
@@ -493,13 +360,14 @@ class SearchApi(OwnerDelegator):
                 "message": f"读取到 {len(files)} 个项目",
                 "data": {
                     "items": files, "count": len(files),
-                    "provider_name": provider.name,
+                    "provider_name": provider_name,
                     "resource_type": resource_type,
                     "resource_type_name": resource_type_name(
-                        resource_type, provider.name
+                        resource_type, provider_name
                     ),
                     "share_url": url,
                     "parent_id": parent_id,
+                    "searchable": searchable,
                 }
             }
         except Exception as error:
@@ -661,6 +529,8 @@ class SearchApi(OwnerDelegator):
         test_owner.save_data = self.save_data
         test_owner.get_config = lambda: dict(config)
         test_owner._applied_config = dict(config)
+        test_owner._cloud_drive_registry = getattr(self, "_cloud_drive_registry", None)
+        test_owner.get_data_path = getattr(self, "get_data_path", None)
 
         handler = SearchHandler(
             plugin=test_owner,
@@ -668,6 +538,30 @@ class SearchApi(OwnerDelegator):
         )
         handler.configure_point_storage(self.get_data, self.save_data)
         return handler
+
+    def api_vue_rebuild_search_source(self, payload: Dict[str, Any]) -> dict:
+        """清空并全量重建指定搜索渠道的本地索引数据。"""
+        source = str((payload or {}).get("source") or "").strip().lower()
+        registry = getattr(getattr(self, "_search_handler", None), "_search_registry", None)
+        if not registry or source not in registry:
+            return {"success": False, "message": "搜索渠道未注册或未启用"}
+        provider = registry.get(source)
+        if not provider.supports(SearchCapability.CACHE_MAINTENANCE):
+            return {"success": False, "message": f"搜索渠道 [{source}] 不支持索引重建"}
+        service = provider.require(SearchCapability.CACHE_MAINTENANCE)
+        if not hasattr(service, "rebuild_index"):
+            return {"success": False, "message": f"搜索渠道 [{source}] 不支持索引重建"}
+        try:
+            result = service.rebuild_index()
+        except Exception as error:
+            logger.warning(f"[{source.upper()}] 索引重建失败：{error}")
+            return {"success": False, "message": f"索引重建失败：{error}"}
+        clear_ui_options_cache()
+        return {
+            "success": True,
+            "message": "索引已清空并全量重建完成",
+            "data": result if isinstance(result, dict) else {},
+        }
 
     def api_vue_search_tmdb_candidates(self, payload: Dict[str, Any]) -> dict:
         """按标题查询 TMDB 候选；指定电视剧 ID 时同时返回真实季。"""
