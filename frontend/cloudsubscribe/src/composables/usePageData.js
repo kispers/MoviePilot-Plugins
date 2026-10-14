@@ -1,10 +1,12 @@
-import {computed, reactive, ref} from "vue";
-import {applyDisplayCatalog} from "./resourceUtils";
+import { computed, reactive, ref } from "vue"
+import { createPluginApi } from "../api"
+import { applyDisplayCatalog } from "./resourceUtils"
 
 export function useHistoryPageData(api, notify, pluginId = "CloudSubscribe") {
-  const historyGroups = ref([]);
-  const embyPlayItems = ref({});
-  const loading = ref(false);
+  const pluginApi = createPluginApi(api, pluginId)
+  const historyGroups = ref([])
+  const embyPlayItems = ref({})
+  const loading = ref(false)
   const historyPage = reactive({
     page: 1,
     pageSize: 10,
@@ -58,42 +60,42 @@ export function useHistoryPageData(api, notify, pluginId = "CloudSubscribe") {
     },
   ])
 
-  let pageRequestSequence = 0;
-  let summaryRequestSequence = 0;
+  let pageRequestSequence = 0
+  let summaryRequestSequence = 0
 
   function normalizeQueryList(value) {
-    return [...new Set((Array.isArray(value) ? value : []).map((item) => String(item || "").trim()).filter(Boolean))];
+    return [...new Set((Array.isArray(value) ? value : []).map((item) => String(item || "").trim()).filter(Boolean))]
   }
 
-  function pageQueryString() {
-    const query = new URLSearchParams({
+  function pageQueryParams() {
+    const params = {
       page: String(historyQuery.page),
       page_size: String(historyQuery.pageSize),
-    })
-    if (historyQuery.keyword) query.set("keyword", historyQuery.keyword);
+    }
+    if (historyQuery.keyword) params.keyword = historyQuery.keyword
     for (const [key, values] of [
       ["resource_types", historyQuery.resourceTypes],
       ["sources", historyQuery.sources],
       ["task_types", historyQuery.taskTypes],
       ["statuses", historyQuery.statuses],
     ]) {
-      if (values.length) query.set(key, values.join(","));
+      if (values.length) params[key] = values.join(",")
     }
-    return query.toString();
+    return params
   }
 
   async function loadPage(showLoading = true) {
-    const requestId = ++pageRequestSequence;
-    if (showLoading) loading.value = true;
+    const requestId = ++pageRequestSequence
+    if (showLoading) loading.value = true
     try {
-      const result = await api.get(`plugin/${pluginId}/page_data?${pageQueryString()}`);
-      if (!result?.success) throw new Error(result?.message || "加载失败");
-      if (requestId !== pageRequestSequence) return false;
-      const data = result.data || {};
-      applyDisplayCatalog(data);
-      const pageData = data.history_page || {};
-      historyGroups.value = Array.isArray(data.history_groups) ? data.history_groups : [];
-      embyPlayItems.value = data.emby_play_items || {};
+      const result = await pluginApi.runtime.pageData(pageQueryParams())
+      if (!result?.success) throw new Error(result?.message || "加载失败")
+      if (requestId !== pageRequestSequence) return false
+      const data = result.data || {}
+      applyDisplayCatalog(data)
+      const pageData = data.history_page || {}
+      historyGroups.value = Array.isArray(data.history_groups) ? data.history_groups : []
+      embyPlayItems.value = data.emby_play_items || {}
       Object.assign(historyPage, {
         page: Math.max(1, Number(pageData.page || 1)),
         pageSize: Math.max(1, Number(pageData.page_size || 10)),
@@ -107,40 +109,40 @@ export function useHistoryPageData(api, notify, pluginId = "CloudSubscribe") {
         },
         enableCloudUpgrade: Boolean(pageData.enable_cloud_upgrade),
       })
-      historyQuery.page = historyPage.page;
-      historyQuery.pageSize = historyPage.pageSize;
-      return true;
+      historyQuery.page = historyPage.page
+      historyQuery.pageSize = historyPage.pageSize
+      return true
     } catch (error) {
       if (requestId === pageRequestSequence && showLoading) {
-        notify(error.message || "加载失败", "error");
+        notify(error.message || "加载失败", "error")
       }
-      return false;
+      return false
     } finally {
-      if (requestId === pageRequestSequence) loading.value = false;
+      if (requestId === pageRequestSequence) loading.value = false
     }
   }
 
   async function loadSummary(showError = true) {
-    const requestId = ++summaryRequestSequence;
+    const requestId = ++summaryRequestSequence
     try {
-      const result = await api.get(`plugin/${pluginId}/history/summary`);
+      const result = await pluginApi.history.summary()
       if (!result?.success) {
-        throw new Error(result?.message || "加载历史摘要失败");
+        throw new Error(result?.message || "加载历史摘要失败")
       }
-      if (requestId !== summaryRequestSequence) return false;
-      const data = result.data || {};
+      if (requestId !== summaryRequestSequence) return false
+      const data = result.data || {}
       Object.assign(historyStats, {
         total: Math.max(0, Number(data.total || 0)),
         today: Math.max(0, Number(data.today || 0)),
         success: Math.max(0, Number(data.success || 0)),
         failed: Math.max(0, Number(data.failed || 0)),
       })
-      return true;
+      return true
     } catch (error) {
       if (requestId === summaryRequestSequence && showError) {
-        notify(error.message || "加载历史摘要失败", "error");
+        notify(error.message || "加载历史摘要失败", "error")
       }
-      return false;
+      return false
     }
   }
 
@@ -157,23 +159,23 @@ export function useHistoryPageData(api, notify, pluginId = "CloudSubscribe") {
     const unchanged = Object.entries(normalized).every(([key, value]) =>
       Array.isArray(value) ? JSON.stringify(value) === JSON.stringify(historyQuery[key]) : value === historyQuery[key],
     )
-    if (unchanged) return false;
-    Object.assign(historyQuery, normalized);
-    return loadPage();
+    if (unchanged) return false
+    Object.assign(historyQuery, normalized)
+    return loadPage()
   }
 
   async function clearHistory(force = false, clearPointsHistory = false) {
-    const result = await api.post(`plugin/${pluginId}/history/clear`, {
+    const result = await pluginApi.history.clear({
       force: Boolean(force),
       clear_points_history: Boolean(clearPointsHistory),
     })
-    if (!result?.success) throw new Error(result?.message || "清空失败");
-    await Promise.all([loadPage(false), loadSummary(false)]);
-    return result.message || "历史已清空";
+    if (!result?.success) throw new Error(result?.message || "清空失败")
+    await Promise.all([loadPage(false), loadSummary(false)])
+    return result.message || "历史已清空"
   }
 
   async function deleteHistory(record, deleteLinkedFiles = false) {
-    const result = await api.post(`plugin/${pluginId}/history/delete`, {
+    const result = await pluginApi.history.remove({
       time: record.time,
       share_url: record.share_url,
       file_name: record.file_name,
@@ -182,9 +184,9 @@ export function useHistoryPageData(api, notify, pluginId = "CloudSubscribe") {
       episode: record.episode,
       delete_linked_files: Boolean(deleteLinkedFiles),
     })
-    if (!result?.success) throw new Error(result?.message || "删除失败");
-    await Promise.all([loadPage(false), loadSummary(false)]);
-    return result.message || "历史记录已删除";
+    if (!result?.success) throw new Error(result?.message || "删除失败")
+    await Promise.all([loadPage(false), loadSummary(false)])
+    return result.message || "历史记录已删除"
   }
 
   async function deleteHistoryBatch(records, deleteLinkedFiles = false) {
@@ -197,17 +199,17 @@ export function useHistoryPageData(api, notify, pluginId = "CloudSubscribe") {
       season: record.season,
       episode: record.episode,
     }))
-    const result = await api.post(`plugin/${pluginId}/history/delete_batch`, {
+    const result = await pluginApi.history.removeBatch({
       records: identities,
       delete_linked_files: Boolean(deleteLinkedFiles),
     })
-    if (!result?.success) throw new Error(result?.message || "批量删除失败");
-    await Promise.all([loadPage(false), loadSummary(false)]);
-    return result.message || "所选历史记录已删除";
+    if (!result?.success) throw new Error(result?.message || "批量删除失败")
+    await Promise.all([loadPage(false), loadSummary(false)])
+    return result.message || "所选历史记录已删除"
   }
 
   async function notifyHistory(record) {
-    const result = await api.post(`plugin/${pluginId}/history/notify`, {
+    const result = await pluginApi.history.notify({
       time: record.time,
       share_url: record.share_url,
       file_name: record.file_name,
@@ -215,15 +217,15 @@ export function useHistoryPageData(api, notify, pluginId = "CloudSubscribe") {
       season: record.season,
       episode: record.episode,
     })
-    if (!result?.success) throw new Error(result?.message || "通知失败");
-    return result.message || "通知已补发";
+    if (!result?.success) throw new Error(result?.message || "通知失败")
+    return result.message || "通知已补发"
   }
 
   async function reconcileHistoryStatus() {
-    const result = await api.post(`plugin/${pluginId}/history/reconcile_status`, {});
-    if (!result?.success) throw new Error(result?.message || "状态校准失败");
-    await Promise.all([loadPage(false), loadSummary(false)]);
-    return result.message || "历史状态已校准";
+    const result = await pluginApi.history.reconcileStatus()
+    if (!result?.success) throw new Error(result?.message || "状态校准失败")
+    await Promise.all([loadPage(false), loadSummary(false)])
+    return result.message || "历史状态已校准"
   }
 
   return {

@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import {nextTick, onMounted, onUnmounted, ref, watch} from "vue";
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue"
 import {
   getLibraryEpisodesCount,
   getRatingText,
@@ -110,97 +110,97 @@ import {
   handlePosterError,
   hasMissingEpisodes,
   mediaItemKey,
-} from "../../composables/resourceUtils";
+} from "../../composables/resourceUtils"
 
 const props = defineProps({
-  items: {type: Array, default: () => []},
-  allItems: {type: Array, default: () => []},
+  items: { type: Array, default: () => [] },
+  allItems: { type: Array, default: () => [] },
   loading: Boolean,
   loadingMore: Boolean,
   hasMore: Boolean,
   searchMode: Boolean,
-});
+})
 
-const emit = defineEmits(["open", "load-more", "exit-search", "sentinel"]);
+const emit = defineEmits(["open", "load-more", "exit-search", "sentinel"])
 
-const sentinel = ref(null);
-let observer = null;
-let scrollThrottleTimer = null;
+const sentinel = ref(null)
+let observer = null
+let scrollThrottleTimer = null
 
 function triggerLoadMore() {
-  if (props.loading || props.loadingMore || !props.hasMore || props.searchMode) return;
-  if (!props.allItems.length) return;
-  emit("load-more");
+  if (props.loading || props.loadingMore || !props.hasMore || props.searchMode) return
+  if (!props.allItems.length) return
+  emit("load-more")
 }
 
 function setupObserver(el) {
   if (observer) {
-    observer.disconnect();
-    observer = null;
+    observer.disconnect()
+    observer = null
   }
-  if (!el || props.searchMode || !props.hasMore) return;
+  if (!el || props.searchMode || !props.hasMore) return
   observer = new IntersectionObserver(
     (entries) => {
       if (entries[0]?.isIntersecting) {
-        triggerLoadMore();
+        triggerLoadMore()
       }
     },
-    {root: null, rootMargin: "600px"},
-  );
-  observer.observe(el);
+    { root: null, rootMargin: "600px" },
+  )
+  observer.observe(el)
 }
 
 function handleScroll() {
-  if (props.searchMode || !props.hasMore || props.loading || props.loadingMore) return;
-  if (scrollThrottleTimer) return;
+  if (props.searchMode || !props.hasMore || props.loading || props.loadingMore) return
+  if (scrollThrottleTimer) return
   scrollThrottleTimer = setTimeout(() => {
-    scrollThrottleTimer = null;
-    if (props.searchMode || !props.hasMore || props.loading || props.loadingMore) return;
-    const scrollBottom = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+    scrollThrottleTimer = null
+    if (props.searchMode || !props.hasMore || props.loading || props.loadingMore) return
+    const scrollBottom = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight)
     if (scrollBottom < 700) {
-      triggerLoadMore();
+      triggerLoadMore()
     }
-  }, 100);
+  }, 100)
 }
 
 watch(sentinel, (el) => {
-  setupObserver(el);
-  emit("sentinel", el);
-});
+  setupObserver(el)
+  emit("sentinel", el)
+})
 
 watch(
   () => [props.searchMode, props.hasMore, props.allItems.length],
   ([searchMode, hasMore]) => {
     if (searchMode || !hasMore) {
       if (observer) {
-        observer.disconnect();
-        observer = null;
+        observer.disconnect()
+        observer = null
       }
     } else {
       nextTick(() => {
-        setupObserver(sentinel.value);
-        emit("sentinel", sentinel.value);
-      });
+        setupObserver(sentinel.value)
+        emit("sentinel", sentinel.value)
+      })
     }
   },
-);
+)
 
 onMounted(() => {
-  window.addEventListener("scroll", handleScroll, {passive: true});
+  window.addEventListener("scroll", handleScroll, { passive: true })
   nextTick(() => {
-    setupObserver(sentinel.value);
-    emit("sentinel", sentinel.value);
-  });
-});
+    setupObserver(sentinel.value)
+    emit("sentinel", sentinel.value)
+  })
+})
 
 onUnmounted(() => {
-  window.removeEventListener("scroll", handleScroll);
-  if (scrollThrottleTimer) clearTimeout(scrollThrottleTimer);
+  window.removeEventListener("scroll", handleScroll)
+  if (scrollThrottleTimer) clearTimeout(scrollThrottleTimer)
   if (observer) {
-    observer.disconnect();
-    observer = null;
+    observer.disconnect()
+    observer = null
   }
-});
+})
 </script>
 
 <style scoped>
@@ -245,9 +245,10 @@ onUnmounted(() => {
   border: 1px solid rgba(var(--v-border-color), 0.12);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-  box-shadow 0.22s ease,
-  border-color 0.22s ease;
+  transition:
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
   user-select: none;
 }
 
@@ -297,8 +298,9 @@ onUnmounted(() => {
 .media-poster :deep(.v-img__img),
 .media-poster :deep(img) {
   opacity: 1 !important;
-  transition: opacity 0.35s ease-in-out,
-  transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  transition:
+    opacity 0.35s ease-in-out,
+    transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }
 
 .media-card:hover .media-poster :deep(.v-img__img),
@@ -378,8 +380,9 @@ onUnmounted(() => {
   background: #16a34a;
   color: #fff;
   box-shadow: 0 2px 6px rgba(22, 163, 74, 0.38);
-  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-  transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 悬停时隐藏已入库徽章 */
@@ -394,8 +397,9 @@ onUnmounted(() => {
 .rating-badge--hover-swap {
   opacity: 0;
   transform: scale(0.85);
-  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-  transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
 
@@ -475,8 +479,9 @@ onUnmounted(() => {
 
 .search-btn {
   transform: translateY(6px);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-  box-shadow 0.22s ease !important;
+  transition:
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.22s ease !important;
   box-shadow: 0 4px 14px rgba(var(--v-theme-primary), 0.45) !important;
   font-weight: 600 !important;
   letter-spacing: 0.3px !important;

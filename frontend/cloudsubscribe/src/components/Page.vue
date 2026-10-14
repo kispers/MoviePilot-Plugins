@@ -41,11 +41,7 @@
             <span class="text-subtitle-2 font-weight-bold">转存统计</span>
           </div>
           <div class="page-actions">
-            <v-btn
-              variant="tonal"
-              size="small"
-              prepend-icon="mdi-link-variant-plus"
-              @click="openManualDialog()">
+            <v-btn variant="tonal" size="small" prepend-icon="mdi-link-variant-plus" @click="openManualDialog()">
               手动添加
             </v-btn>
             <v-btn
@@ -167,7 +163,7 @@
       :loading="Boolean(retryingHistoryKey)"
       persistent
       @confirm="retryHistory">
-      确认恢复“{{ historyUpgradeLabel(retryingRecord ? {records: [retryingRecord]} : null) }}”的转存任务？
+      确认恢复“{{ historyUpgradeLabel(retryingRecord ? { records: [retryingRecord] } : null) }}”的转存任务？
     </ConfirmDialog>
     <ConfirmDialog
       v-model="upgradeVisible"
@@ -188,9 +184,11 @@
       icon="mdi-stop-circle-outline"
       icon-color="warning"
       alert-type="warning"
-      :alert-text="['downloading', 'transferring', 'postprocessing'].includes(stoppingTask?.status)
-        ? '将停止插件文件后处理；离线任务、已下载文件和STRM均会保留。'
-        : '任务将在安全节点停止，已完成的处理不会回退。'"
+      :alert-text="
+        ['downloading', 'transferring', 'postprocessing'].includes(stoppingTask?.status)
+          ? '将停止插件文件后处理；离线任务、已下载文件和STRM均会保留。'
+          : '任务将在安全节点停止，已完成的处理不会回退。'
+      "
       confirm-text="确认停止"
       confirm-color="warning"
       :loading="stopping"
@@ -240,15 +238,19 @@
       title="删除历史记录"
       icon="mdi-delete-outline"
       icon-color="error"
-      :body="deletingGroupCount
-        ? `确认删除所选 ${deletingGroupCount} 个汇总项下的 ${deletingRecords.length} 条转存历史？`
-        : `确认删除“${deletingRecord?.file_name || '此记录'}”的转存历史？`"
-      :options="[{
-        key: 'deleteLinked',
-        label: '同时删除关联的网盘文件、本地 STRM 与媒体库条目',
-        desc: '删除网盘源文件与本地 STRM 后，按路径刷新媒体库，已无文件的条目会被移除；未勾选时仅删除历史记录',
-        color: 'error'
-      }]"
+      :body="
+        deletingGroupCount
+          ? `确认删除所选 ${deletingGroupCount} 个汇总项下的 ${deletingRecords.length} 条转存历史？`
+          : `确认删除“${deletingRecord?.file_name || '此记录'}”的转存历史？`
+      "
+      :options="[
+        {
+          key: 'deleteLinked',
+          label: '同时删除关联的网盘文件、本地 STRM 与媒体库条目',
+          desc: '删除网盘源文件与本地 STRM 后，按路径刷新媒体库，已无文件的条目会被移除；未勾选时仅删除历史记录',
+          color: 'error',
+        },
+      ]"
       confirm-text="确认删除"
       confirm-color="error"
       :loading="Boolean(deletingHistoryKey)"
@@ -267,25 +269,27 @@
 </template>
 
 <script setup>
-import {computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch} from "vue";
-import RuntimeCard from "./dashboard/RuntimeCard.vue";
-import HistoryTable from "./dashboard/HistoryTable.vue";
-import StatsGrid from "./dashboard/StatsGrid.vue";
-import {useHistoryPageData} from "../composables/usePageData.js";
-import {useRuntimeData} from "../composables/useRuntimeData.js";
-import {CACHE_CATEGORIES} from "../composables/useCacheActions.js";
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from "vue"
+import RuntimeCard from "./dashboard/RuntimeCard.vue"
+import HistoryTable from "./dashboard/HistoryTable.vue"
+import StatsGrid from "./dashboard/StatsGrid.vue"
+import { useHistoryPageData } from "../composables/usePageData.js"
+import { useRuntimeData } from "../composables/useRuntimeData.js"
+import { CACHE_CATEGORIES } from "../composables/useCacheActions.js"
+import { createPluginApi } from "../api"
 
-const ConfirmDialog = defineAsyncComponent(() => import("./dialogs/ConfirmDialog.vue"));
+const ConfirmDialog = defineAsyncComponent(() => import("./dialogs/ConfirmDialog.vue"))
 const ManualResourceDialog = defineAsyncComponent(() => import("./dialogs/ManualResourceDialog.vue"))
 const OfflineTasksDialog = defineAsyncComponent(() => import("./dialogs/OfflineTasksDialog.vue"))
-const RewardDialog = defineAsyncComponent(() => import("./dialogs/RewardDialog.vue"));
+const RewardDialog = defineAsyncComponent(() => import("./dialogs/RewardDialog.vue"))
 
 const props = defineProps({
   api: { type: [Object, Function], required: true },
 })
 const emit = defineEmits(["close", "switch", "action"])
 const api = props.api
-const rewardVisible = ref(false);
+const pluginApi = createPluginApi(props.api, "CloudSubscribe")
+const rewardVisible = ref(false)
 const message = ref(""),
   messageType = ref("success"),
   messageVisible = ref(false),
@@ -299,8 +303,6 @@ const message = ref(""),
   stopping = ref(false),
   clearVisible = ref(false),
   clearing = ref(false),
-  forceClearHistory = ref(false),
-  clearPointsHistory = ref(false),
   cacheVisible = ref(false),
   clearingCache = ref(false),
   retryingHistoryKey = ref(""),
@@ -310,7 +312,6 @@ const message = ref(""),
   deletingRecord = ref(null),
   deletingRecords = ref([]),
   deletingGroupCount = ref(0),
-  deleteLinkedFiles = ref(false),
   deletingHistoryKey = ref(""),
   notifyVisible = ref(false),
   notifyingRecord = ref(null),
@@ -324,7 +325,7 @@ const message = ref(""),
   searchStarting = ref(false),
   historyDirty = ref(true),
   historySelection = ref({ groupCount: 0, subscribeIds: [], targets: [] })
-let historyRefreshTimer = null;
+let historyRefreshTimer = null
 function notify(text, type = "success") {
   message.value = text
   messageType.value = type
@@ -360,17 +361,17 @@ const {
   notifyHistory: notifyHistoryRequest,
   reconcileHistoryStatus: reconcileHistoryStatusRequest,
 } = useHistoryPageData(api, notify)
-const reconcilingHistory = ref(false);
+const reconcilingHistory = ref(false)
 
 async function confirmReconcileHistory() {
-  reconcilingHistory.value = true;
+  reconcilingHistory.value = true
   try {
-    const msg = await reconcileHistoryStatusRequest();
-    notify(msg || "历史状态已成功校准");
+    const msg = await reconcileHistoryStatusRequest()
+    notify(msg || "历史状态已成功校准")
   } catch (err) {
-    notify(err?.message || "校准状态失败", "error");
+    notify(err?.message || "校准状态失败", "error")
   } finally {
-    reconcilingHistory.value = false;
+    reconcilingHistory.value = false
   }
 }
 
@@ -414,17 +415,18 @@ watch(mainTab, (tab) => {
 })
 const activeTaskCount = computed(
   () =>
-    (runtime.tasks || []).filter((task) => ["queued", "running", "stopping", "downloading", "transferring", "postprocessing"].includes(task.status))
-      .length,
+    (runtime.tasks || []).filter((task) =>
+      ["queued", "running", "stopping", "downloading", "transferring", "postprocessing"].includes(task.status),
+    ).length,
 )
 const stoppableTaskCount = computed(
   () => (runtime.tasks || []).filter((task) => ["queued", "running"].includes(task.status)).length,
 )
 const selectedHistoryCount = computed(() => {
-  const selection = historySelection.value;
-  const groups = Math.max(0, Number(selection.groupCount || 0));
-  return groups || (Math.max(0, Number(selection.recordCount || 0)) ? 1 : 0);
-});
+  const selection = historySelection.value
+  const groups = Math.max(0, Number(selection.groupCount || 0))
+  return groups || (Math.max(0, Number(selection.recordCount || 0)) ? 1 : 0)
+})
 const immediateSearchLabel = computed(() =>
   selectedHistoryCount.value ? `搜索所选（${selectedHistoryCount.value}）` : "搜索全部",
 )
@@ -497,7 +499,7 @@ function openMediaDetail(link) {
 async function playHistory(itemId) {
   const popup = window.open("", "_blank")
   try {
-    const result = await api.get(`plugin/CloudSubscribe/history/play/${encodeURIComponent(itemId)}`)
+    const result = await pluginApi.history.play(itemId)
     const url = result?.data?.url
     if (!result?.success || !url) throw new Error(result?.message || "未找到播放地址")
     if (popup) popup.location.href = url
@@ -508,10 +510,10 @@ async function playHistory(itemId) {
   }
 }
 
-async function clearHistory({forceClear, clearPoints}) {
+async function clearHistory({ forceClear, clearPoints }) {
   clearing.value = true
   try {
-    const resultMessage = await clearHistoryRequest(forceClear, clearPoints);
+    const resultMessage = await clearHistoryRequest(forceClear, clearPoints)
     clearVisible.value = false
     notify(resultMessage)
   } catch (e) {
@@ -544,7 +546,7 @@ async function retryHistory() {
   if (!record || retryingHistoryKey.value) return
   retryingHistoryKey.value = [record.time, record.share_url, record.file_name].join("|")
   try {
-    const result = await api.post("plugin/CloudSubscribe/history/retry", {
+    const result = await pluginApi.history.retry({
       time: record.time,
       share_url: record.share_url,
       file_name: record.file_name,
@@ -623,7 +625,7 @@ function confirmDeleteGroups({ records, groupCount }) {
   deleteVisible.value = true
 }
 
-async function deleteHistory({deleteLinked}) {
+async function deleteHistory({ deleteLinked }) {
   const batch = deletingGroupCount.value > 0
   const record = deletingRecord.value
   if (!batch && !record) return
@@ -827,8 +829,6 @@ async function notifyHistory() {
 .dialog-card {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16) !important;
 }
-
-
 
 @media (max-width: 600px) {
   :global(.v-overlay__content:has(.cloud-subscribe-page)) {

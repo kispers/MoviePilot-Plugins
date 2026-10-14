@@ -94,11 +94,11 @@ const netflixCountries = {
   VN: "Vietnam",
   ZA: "South Africa",
 }
-const netflixCountryItems = Object.entries(netflixCountries).map(([value, title]) => ({title, value}));
-const monthItems = Array.from({length: 12}, (_, index) => ({
+const netflixCountryItems = Object.entries(netflixCountries).map(([value, title]) => ({ title, value }))
+const monthItems = Array.from({ length: 12 }, (_, index) => ({
   title: `${index + 1} 月`,
   value: index + 1,
-}));
+}))
 
 export function createSubscribeSection(options = {}) {
   return {
@@ -106,14 +106,14 @@ export function createSubscribeSection(options = {}) {
     title: "榜单订阅",
     icon: "mdi-format-list-bulleted-square",
     subtabs: [
-      {value: "global", title: "通用设置", icon: "mdi-tune-variant"},
-      {value: "douban", title: "豆瓣", icon: "mdi-star-outline"},
-      {value: "maoyan", title: "猫眼", icon: "mdi-filmstrip"},
-      {value: "tmdb", title: "TMDB", icon: "mdi-movie-search-outline"},
-      {value: "mikan", title: "Mikan", icon: "mdi-animation-outline"},
-      {value: "bangumi", title: "Bangumi", icon: "mdi-calendar-star"},
-      {value: "anilist", title: "AniList", icon: "mdi-star-face"},
-      {value: "netflix", title: "Netflix", icon: "mdi-netflix"},
+      { value: "global", title: "通用设置", icon: "mdi-tune-variant" },
+      { value: "douban", title: "豆瓣", icon: "mdi-star-outline" },
+      { value: "maoyan", title: "猫眼", icon: "mdi-filmstrip" },
+      { value: "tmdb", title: "TMDB", icon: "mdi-movie-search-outline" },
+      { value: "mikan", title: "Mikan", icon: "mdi-animation-outline" },
+      { value: "bangumi", title: "Bangumi", icon: "mdi-calendar-star" },
+      { value: "anilist", title: "AniList", icon: "mdi-star-face" },
+      { value: "netflix", title: "Netflix", icon: "mdi-netflix" },
     ],
     groups: [
       {
@@ -121,7 +121,7 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filter-cog-outline",
         tab: "global",
         fields: [
-          {key: "auto_subscribe_enabled", label: "启用榜单自动订阅", type: "switch", cols: 4},
+          { key: "auto_subscribe_enabled", label: "启用榜单自动订阅", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_onlyonce",
             label: "保存后立即运行一次",
@@ -129,7 +129,7 @@ export function createSubscribeSection(options = {}) {
             hint: "立即执行一次并复位",
             cols: 4,
           },
-          {key: "auto_subscribe_notify", label: "发送运行结果通知", type: "switch", cols: 4},
+          { key: "auto_subscribe_notify", label: "发送运行结果通知", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_cron",
             label: "榜单订阅执行周期",
@@ -143,11 +143,11 @@ export function createSubscribeSection(options = {}) {
             type: "select",
             multiple: true,
             items: [
-              {title: "全部", value: "all"},
-              {title: "电影", value: "movie"},
-              {title: "电视剧", value: "tv"},
-              {title: "动漫电影", value: "anime_movie"},
-              {title: "动漫番剧", value: "anime_tv"},
+              { title: "全部", value: "all" },
+              { title: "电影", value: "movie" },
+              { title: "电视剧", value: "tv" },
+              { title: "动漫电影", value: "anime_movie" },
+              { title: "动漫番剧", value: "anime_tv" },
             ],
             default: ["all"],
             hint: "所有订阅渠道通用的媒体类型限制。支持多选，保留“全部”默认订阅所有类型。",
@@ -160,9 +160,9 @@ export function createSubscribeSection(options = {}) {
             hint: "跳过特别篇 (S00)",
             cols: 4,
           },
-          {key: "auto_subscribe_skip_subscribed", label: "跳过已有活动订阅", type: "switch", cols: 4},
-          {key: "auto_subscribe_skip_history", label: "跳过历史订阅", type: "switch", cols: 4},
-          {key: "auto_subscribe_skip_library", label: "跳过媒体库已有内容", type: "switch", cols: 4},
+          { key: "auto_subscribe_skip_subscribed", label: "跳过已有活动订阅", type: "switch", cols: 4 },
+          { key: "auto_subscribe_skip_history", label: "跳过历史订阅", type: "switch", cols: 4 },
+          { key: "auto_subscribe_skip_library", label: "跳过媒体库已有内容", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_username",
             label: "订阅用户名",
@@ -184,8 +184,8 @@ export function createSubscribeSection(options = {}) {
             placeholder: "http://127.0.0.1:7890",
             cols: 12,
           },
-          {key: "auto_subscribe_proxy_username", label: "代理用户名", cols: 6},
-          {key: "auto_subscribe_proxy_password", label: "代理密码", type: "password", cols: 6},
+          { key: "auto_subscribe_proxy_username", label: "代理用户名", cols: 6 },
+          { key: "auto_subscribe_proxy_password", label: "代理密码", type: "password", cols: 6 },
         ],
       },
       {
@@ -193,7 +193,7 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-server-network-outline",
         tab: "douban",
         fields: [
-          {key: "auto_subscribe_douban_enabled", label: "启用豆瓣榜单", type: "switch", cols: 4},
+          { key: "auto_subscribe_douban_enabled", label: "启用豆瓣榜单", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_douban_proxy",
             label: "启用代理服务器",
@@ -201,7 +201,7 @@ export function createSubscribeSection(options = {}) {
             hint: "使用通用设置代理",
             cols: 4,
           },
-          {key: "auto_subscribe_douban_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4},
+          { key: "auto_subscribe_douban_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4 },
           {
             key: "auto_subscribe_douban_test",
             label: "测试豆瓣榜单",
@@ -222,14 +222,14 @@ export function createSubscribeSection(options = {}) {
             type: "select",
             multiple: true,
             items: [
-              {title: "豆瓣正在热映", value: "movie-showing"},
-              {title: "豆瓣热门电影", value: "movie-hot"},
-              {title: "豆瓣热门电视剧", value: "tv-hot"},
-              {title: "豆瓣国产剧集周榜", value: "tv-weekly-chinese"},
-              {title: "豆瓣全球剧集周榜", value: "tv-weekly-global"},
-              {title: "豆瓣动画剧集", value: "tv-animation"},
-              {title: "豆瓣最新电影", value: "movie-latest"},
-              {title: "豆瓣最新剧集", value: "tv-latest"},
+              { title: "豆瓣正在热映", value: "movie-showing" },
+              { title: "豆瓣热门电影", value: "movie-hot" },
+              { title: "豆瓣热门电视剧", value: "tv-hot" },
+              { title: "豆瓣国产剧集周榜", value: "tv-weekly-chinese" },
+              { title: "豆瓣全球剧集周榜", value: "tv-weekly-global" },
+              { title: "豆瓣动画剧集", value: "tv-animation" },
+              { title: "豆瓣最新电影", value: "movie-latest" },
+              { title: "豆瓣最新剧集", value: "tv-latest" },
             ],
             cols: 12,
           },
@@ -240,8 +240,8 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filter-outline",
         tab: "douban",
         fields: [
-          {key: "auto_subscribe_douban_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4},
-          {key: "auto_subscribe_douban_min_year", label: "年份≥", type: "number", min: 0, cols: 4},
+          { key: "auto_subscribe_douban_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4 },
+          { key: "auto_subscribe_douban_min_year", label: "年份≥", type: "number", min: 0, cols: 4 },
           {
             key: "auto_subscribe_douban_min_month",
             label: "月份≥",
@@ -257,7 +257,7 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-movie-search-outline",
         tab: "tmdb",
         fields: [
-          {key: "auto_subscribe_tmdb_enabled", label: "启用 TMDB 榜单", type: "switch", cols: 4},
+          { key: "auto_subscribe_tmdb_enabled", label: "启用 TMDB 榜单", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_tmdb_proxy",
             label: "启用代理服务器",
@@ -265,7 +265,7 @@ export function createSubscribeSection(options = {}) {
             hint: "使用通用设置代理",
             cols: 4,
           },
-          {key: "auto_subscribe_tmdb_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4},
+          { key: "auto_subscribe_tmdb_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4 },
           {
             key: "auto_subscribe_tmdb_test",
             label: "测试 TMDB 榜单",
@@ -286,13 +286,13 @@ export function createSubscribeSection(options = {}) {
             type: "select",
             multiple: true,
             items: [
-              {title: "TMDB 今日趋势", value: "trending"},
-              {title: "TMDB 热门电影", value: "movies"},
-              {title: "TMDB 热门剧集", value: "tvs"},
-              {title: "TMDB 正在上映", value: "now_playing"},
-              {title: "TMDB 即将上映", value: "upcoming"},
-              {title: "TMDB 高分电影", value: "top_rated_movies"},
-              {title: "TMDB 高分剧集", value: "top_rated_tvs"},
+              { title: "TMDB 今日趋势", value: "trending" },
+              { title: "TMDB 热门电影", value: "movies" },
+              { title: "TMDB 热门剧集", value: "tvs" },
+              { title: "TMDB 正在上映", value: "now_playing" },
+              { title: "TMDB 即将上映", value: "upcoming" },
+              { title: "TMDB 高分电影", value: "top_rated_movies" },
+              { title: "TMDB 高分剧集", value: "top_rated_tvs" },
             ],
             cols: 12,
           },
@@ -303,8 +303,8 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filter-outline",
         tab: "tmdb",
         fields: [
-          {key: "auto_subscribe_tmdb_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4},
-          {key: "auto_subscribe_tmdb_min_year", label: "年份≥", type: "number", min: 0, cols: 4},
+          { key: "auto_subscribe_tmdb_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4 },
+          { key: "auto_subscribe_tmdb_min_year", label: "年份≥", type: "number", min: 0, cols: 4 },
           {
             key: "auto_subscribe_tmdb_min_month",
             label: "月份≥",
@@ -320,7 +320,7 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-calendar-star",
         tab: "bangumi",
         fields: [
-          {key: "auto_subscribe_bangumi_enabled", label: "启用 Bangumi 榜单", type: "switch", cols: 4},
+          { key: "auto_subscribe_bangumi_enabled", label: "启用 Bangumi 榜单", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_bangumi_proxy",
             label: "启用代理服务器",
@@ -328,7 +328,7 @@ export function createSubscribeSection(options = {}) {
             hint: "使用通用设置代理",
             cols: 4,
           },
-          {key: "auto_subscribe_bangumi_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4},
+          { key: "auto_subscribe_bangumi_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4 },
           {
             key: "auto_subscribe_bangumi_test",
             label: "测试 Bangumi 榜单",
@@ -343,8 +343,8 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filter-outline",
         tab: "bangumi",
         fields: [
-          {key: "auto_subscribe_bangumi_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4},
-          {key: "auto_subscribe_bangumi_min_year", label: "年份≥", type: "number", min: 0, cols: 4},
+          { key: "auto_subscribe_bangumi_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4 },
+          { key: "auto_subscribe_bangumi_min_year", label: "年份≥", type: "number", min: 0, cols: 4 },
           {
             key: "auto_subscribe_bangumi_min_month",
             label: "月份≥",
@@ -359,7 +359,7 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-chart-box-outline",
         tab: "anilist",
         fields: [
-          {key: "auto_subscribe_anilist_enabled", label: "启用 AniList 榜单", type: "switch", cols: 4},
+          { key: "auto_subscribe_anilist_enabled", label: "启用 AniList 榜单", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_anilist_proxy",
             label: "启用代理服务器",
@@ -367,7 +367,7 @@ export function createSubscribeSection(options = {}) {
             hint: "使用通用设置代理",
             cols: 4,
           },
-          {key: "auto_subscribe_anilist_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4},
+          { key: "auto_subscribe_anilist_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4 },
           {
             key: "auto_subscribe_anilist_test",
             label: "测试 AniList 榜单",
@@ -388,10 +388,10 @@ export function createSubscribeSection(options = {}) {
             type: "select",
             multiple: true,
             items: [
-              {title: "当季热门 (Popular This Season)", value: "popular_this_season"},
-              {title: "近期趋势 (Trending Now)", value: "trending"},
-              {title: "历史最热 (All Time Popular)", value: "popular_all_time"},
-              {title: "最高评分 (Top Rated)", value: "top_rated"},
+              { title: "当季热门 (Popular This Season)", value: "popular_this_season" },
+              { title: "近期趋势 (Trending Now)", value: "trending" },
+              { title: "历史最热 (All Time Popular)", value: "popular_all_time" },
+              { title: "最高评分 (Top Rated)", value: "top_rated" },
             ],
             cols: 12,
           },
@@ -402,8 +402,8 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filter-outline",
         tab: "anilist",
         fields: [
-          {key: "auto_subscribe_anilist_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4},
-          {key: "auto_subscribe_anilist_min_year", label: "年份≥", type: "number", min: 0, cols: 4},
+          { key: "auto_subscribe_anilist_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4 },
+          { key: "auto_subscribe_anilist_min_year", label: "年份≥", type: "number", min: 0, cols: 4 },
           {
             key: "auto_subscribe_anilist_min_month",
             label: "月份≥",
@@ -418,7 +418,7 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-server-network-outline",
         tab: "maoyan",
         fields: [
-          {key: "auto_subscribe_maoyan_enabled", label: "启用猫眼榜单", type: "switch", cols: 6},
+          { key: "auto_subscribe_maoyan_enabled", label: "启用猫眼榜单", type: "switch", cols: 6 },
           {
             key: "auto_subscribe_maoyan_proxy",
             label: "启用代理服务器",
@@ -446,27 +446,27 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filmstrip",
         tab: "maoyan",
         fields: [
-          {key: "auto_subscribe_maoyan_movie_box", label: "电影票房榜", type: "switch", cols: 4},
+          { key: "auto_subscribe_maoyan_movie_box", label: "电影票房榜", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_maoyan_web_platform_map",
             label: "网播热度 平台 × 类型",
             type: "region-media-map",
             cols: 12,
             items: [
-              {title: "全网", value: "all"},
-              {title: "腾讯视频", value: "tx"},
-              {title: "爱奇艺", value: "iqiyi"},
-              {title: "优酷", value: "youku"},
-              {title: "乐视", value: "letv"},
-              {title: "芒果TV", value: "mgtv"},
-              {title: "PPTV", value: "pptv"},
-              {title: "搜狐", value: "sohu"},
+              { title: "全网", value: "all" },
+              { title: "腾讯视频", value: "tx" },
+              { title: "爱奇艺", value: "iqiyi" },
+              { title: "优酷", value: "youku" },
+              { title: "乐视", value: "letv" },
+              { title: "芒果TV", value: "mgtv" },
+              { title: "PPTV", value: "pptv" },
+              { title: "搜狐", value: "sohu" },
             ],
             columns: [
-              {title: "电视剧+网络剧", value: "series"},
-              {title: "电视剧", value: "tv"},
-              {title: "网络剧", value: "web"},
-              {title: "综艺", value: "variety"},
+              { title: "电视剧+网络剧", value: "series" },
+              { title: "电视剧", value: "tv" },
+              { title: "网络剧", value: "web" },
+              { title: "综艺", value: "variety" },
             ],
             hint: "按平台配置要订阅的类型",
           },
@@ -477,9 +477,9 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filter-outline",
         tab: "maoyan",
         fields: [
-          {key: "auto_subscribe_maoyan_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4},
-          {key: "auto_subscribe_maoyan_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4},
-          {key: "auto_subscribe_maoyan_min_year", label: "年份≥", type: "number", min: 0, cols: 4},
+          { key: "auto_subscribe_maoyan_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4 },
+          { key: "auto_subscribe_maoyan_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 4 },
+          { key: "auto_subscribe_maoyan_min_year", label: "年份≥", type: "number", min: 0, cols: 4 },
           {
             key: "auto_subscribe_maoyan_min_month",
             label: "月份≥",
@@ -494,7 +494,7 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-server-network-outline",
         tab: "netflix",
         fields: [
-          {key: "auto_subscribe_netflix_enabled", label: "启用 Netflix 榜单", type: "switch", cols: 6},
+          { key: "auto_subscribe_netflix_enabled", label: "启用 Netflix 榜单", type: "switch", cols: 6 },
           {
             key: "auto_subscribe_netflix_proxy",
             label: "启用代理服务器",
@@ -522,14 +522,14 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-netflix",
         tab: "netflix",
         fields: [
-          {key: "auto_subscribe_netflix_global", label: "全球榜", type: "switch", cols: 4},
+          { key: "auto_subscribe_netflix_global", label: "全球榜", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_netflix_global_dataset",
             label: "全球数据源",
             type: "select",
             items: [
-              {title: "最新周榜", value: "weekly"},
-              {title: "史上最热（不分周）", value: "popular"},
+              { title: "最新周榜", value: "weekly" },
+              { title: "史上最热（不分周）", value: "popular" },
             ],
             cols: 8,
           },
@@ -539,10 +539,10 @@ export function createSubscribeSection(options = {}) {
             type: "select",
             multiple: true,
             items: [
-              {title: "英语电影", value: "Films (English)"},
-              {title: "非英语电影", value: "Films (Non-English)"},
-              {title: "英语剧集", value: "TV (English)"},
-              {title: "非英语剧集", value: "TV (Non-English)"},
+              { title: "英语电影", value: "Films (English)" },
+              { title: "非英语电影", value: "Films (Non-English)" },
+              { title: "英语剧集", value: "TV (English)" },
+              { title: "非英语剧集", value: "TV (Non-English)" },
             ],
             hint: "多选，通过 TMDB 识别",
             cols: 12,
@@ -554,8 +554,8 @@ export function createSubscribeSection(options = {}) {
             cols: 12,
             items: netflixCountryItems,
             columns: [
-              {title: "电影", value: "Films"},
-              {title: "剧集", value: "TV"},
+              { title: "电影", value: "Films" },
+              { title: "剧集", value: "TV" },
             ],
             hint: "按地区配置要订阅的类型",
           },
@@ -566,9 +566,9 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filter-outline",
         tab: "netflix",
         fields: [
-          {key: "auto_subscribe_netflix_limit", label: "每榜取前 N", type: "number", min: 1, max: 100, cols: 3},
-          {key: "auto_subscribe_netflix_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 3},
-          {key: "auto_subscribe_netflix_min_year", label: "年份≥", type: "number", min: 0, cols: 3},
+          { key: "auto_subscribe_netflix_limit", label: "每榜取前 N", type: "number", min: 1, max: 100, cols: 3 },
+          { key: "auto_subscribe_netflix_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 3 },
+          { key: "auto_subscribe_netflix_min_year", label: "年份≥", type: "number", min: 0, cols: 3 },
           {
             key: "auto_subscribe_netflix_min_month",
             label: "月份≥",
@@ -612,7 +612,7 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-server-network-outline",
         tab: "mikan",
         fields: [
-          {key: "auto_subscribe_mikan_enabled", label: "启用 Mikan 新番", type: "switch", cols: 4},
+          { key: "auto_subscribe_mikan_enabled", label: "启用 Mikan 新番", type: "switch", cols: 4 },
           {
             key: "auto_subscribe_mikan_proxy",
             label: "启用代理服务器",
@@ -633,8 +633,8 @@ export function createSubscribeSection(options = {}) {
             type: "combobox",
             multiple: true,
             items: [
-              {title: "mikanani.me", value: "https://mikanani.me"},
-              {title: "mikanime.tv", value: "https://mikanime.tv"},
+              { title: "mikanani.me", value: "https://mikanani.me" },
+              { title: "mikanime.tv", value: "https://mikanime.tv" },
             ],
             hint: "支持配置多个镜像地址",
             cols: 12,
@@ -653,21 +653,21 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-animation-outline",
         tab: "mikan",
         fields: [
-          {key: "auto_subscribe_mikan_year", label: "番组年份", type: "number", min: 0, cols: 4},
+          { key: "auto_subscribe_mikan_year", label: "番组年份", type: "number", min: 0, cols: 4 },
           {
             key: "auto_subscribe_mikan_season",
             label: "季度",
             type: "select",
             items: [
-              {title: "当前季度（自动）", value: "当前"},
-              {title: "春季", value: "春"},
-              {title: "夏季", value: "夏"},
-              {title: "秋季", value: "秋"},
-              {title: "冬季", value: "冬"},
+              { title: "当前季度（自动）", value: "当前" },
+              { title: "春季", value: "春" },
+              { title: "夏季", value: "夏" },
+              { title: "秋季", value: "秋" },
+              { title: "冬季", value: "冬" },
             ],
             cols: 4,
           },
-          {key: "auto_subscribe_mikan_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4},
+          { key: "auto_subscribe_mikan_limit", label: "每榜条数", type: "number", min: 1, max: 100, cols: 4 },
         ],
       },
       {
@@ -675,8 +675,8 @@ export function createSubscribeSection(options = {}) {
         icon: "mdi-filter-outline",
         tab: "mikan",
         fields: [
-          {key: "auto_subscribe_mikan_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 6},
-          {key: "auto_subscribe_mikan_min_year", label: "年份≥", type: "number", min: 0, cols: 6},
+          { key: "auto_subscribe_mikan_min_vote", label: "评分≥", type: "number", min: 0, max: 10, cols: 6 },
+          { key: "auto_subscribe_mikan_min_year", label: "年份≥", type: "number", min: 0, cols: 6 },
           {
             key: "auto_subscribe_mikan_min_month",
             label: "月份≥",

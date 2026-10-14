@@ -301,10 +301,11 @@
 </template>
 
 <script setup>
-import {computed, ref, watch} from "vue";
-import {useDisplay} from "vuetify";
-import DirectoryDialog from "./DirectoryDialog.vue";
-import {isCancellationError} from "../../composables/useMediaDetail";
+import { computed, ref, watch } from "vue"
+import { useDisplay } from "vuetify"
+import DirectoryDialog from "./DirectoryDialog.vue"
+import { isCancellationError } from "../../composables/useMediaDetail"
+import { createPluginApi } from "../../api"
 
 const props = defineProps({
   modelValue: Boolean,
@@ -314,27 +315,28 @@ const props = defineProps({
   initialMedia: { type: Object, default: null },
 })
 const emit = defineEmits(["update:modelValue", "started"])
+const pluginApi = createPluginApi(props.api, () => props.pluginId)
 const display = useDisplay()
 const isMobile = computed(() => display.xs.value)
 const subscribes = ref([])
 const subscribeId = ref(null)
-const selectedTarget = ref(null);
-const targetSearch = ref("");
+const selectedTarget = ref(null)
+const targetSearch = ref("")
 const actionMode = ref("links")
 const resourceLinks = ref("")
-const cloudDrives = ref([]);
-const targetCloudDrive = ref("");
-const crossTransferMediaTypes = ref([]);
-const enableCloudUpgrade = ref(false);
-const selectedCloudResource = ref(null);
-const cloudDirectoryVisible = ref(false);
+const cloudDrives = ref([])
+const targetCloudDrive = ref("")
+const crossTransferMediaTypes = ref([])
+const enableCloudUpgrade = ref(false)
+const selectedCloudResource = ref(null)
+const cloudDirectoryVisible = ref(false)
 const manualUpgrade = ref(false)
-const skipHistory = ref(false);
+const skipHistory = ref(false)
 const tmdbCandidates = ref([])
 const selectedMedia = ref(null)
-const seasons = ref([]);
-const availableSeasons = ref([]);
-const parsedSeasons = ref([]);
+const seasons = ref([])
+const availableSeasons = ref([])
+const parsedSeasons = ref([])
 const mediaServers = ref([])
 const mediaServer = ref(null)
 const mediaKeyword = ref("")
@@ -346,36 +348,36 @@ const loadingOptions = ref(false)
 const loadingMediaServers = ref(false)
 const loadingMedia = ref(false)
 const searchingTmdb = ref(false)
-const loadingTmdbSeasons = ref(false);
+const loadingTmdbSeasons = ref(false)
 const matchingUpgradeTmdb = ref(false)
 const submitting = ref(false)
 const confirmVisible = ref(false)
 const error = ref("")
-let cloudMediaResolveRevision = 0;
-let tmdbSeasonRevision = 0;
-let resourceResolveTimer = null;
-let resourceResolveRevision = 0;
+let cloudMediaResolveRevision = 0
+let tmdbSeasonRevision = 0
+let resourceResolveTimer = null
+let resourceResolveRevision = 0
 
 const targetCandidates = computed(() => {
-  const keyword = normalizeSearchText(targetSearch.value);
+  const keyword = normalizeSearchText(targetSearch.value)
   const subscriptionItems = subscribes.value
     .filter((item) => !keyword || normalizeSearchText(`${item?.title || ""} ${item?.value || ""}`).includes(keyword))
-    .map((item) => ({...item, target_kind: "subscribe", target_key: `subscribe:${item.value}`}))
+    .map((item) => ({ ...item, target_kind: "subscribe", target_key: `subscribe:${item.value}` }))
   const tmdbItems = tmdbCandidates.value.map((item) => ({
     ...item,
     target_kind: "tmdb",
     target_key: `tmdb:${item.media_type}:${item.tmdb_id}`,
   }))
-  return [...subscriptionItems, ...tmdbItems];
+  return [...subscriptionItems, ...tmdbItems]
 })
 
-const targetMediaType = computed(() => String(selectedTarget.value?.media_type || ""));
-const manualMediaType = targetMediaType;
+const targetMediaType = computed(() => String(selectedTarget.value?.media_type || ""))
+const manualMediaType = targetMediaType
 
 const selectableCloudDrives = computed(() => {
-  const mediaType = manualMediaType.value;
-  if (!mediaType) return cloudDrives.value;
-  return cloudDrives.value.filter((item) => item.mode !== "cross" || crossTransferMediaTypes.value.includes(mediaType));
+  const mediaType = manualMediaType.value
+  if (!mediaType) return cloudDrives.value
+  return cloudDrives.value.filter((item) => item.mode !== "cross" || crossTransferMediaTypes.value.includes(mediaType))
 })
 
 const selectedCloudResourceAllowed = computed(
@@ -417,26 +419,26 @@ const canSubmit = computed(() => {
   if (submitting.value) return false
   if (actionMode.value === "upgrade") return selectedMediaItems.value.length > 0
   if (!resourceLinks.value.trim()) return false
-  if (!selectedCloudResourceAllowed.value) return false;
-  if (!selectedTarget.value?.tmdb_id) return false;
-  return true;
+  if (!selectedCloudResourceAllowed.value) return false
+  if (!selectedTarget.value?.tmdb_id) return false
+  return true
 })
 
 function normalizeSeasons(values) {
-  const normalized = [];
+  const normalized = []
   for (const value of Array.isArray(values) ? values : [values]) {
     for (const token of String(value ?? "").split(/[,，\s]+/)) {
-      const season = Number(token);
+      const season = Number(token)
       if (Number.isInteger(season) && season > 0 && season <= 999 && !normalized.includes(season)) {
-        normalized.push(season);
+        normalized.push(season)
       }
     }
   }
-  return normalized.sort((left, right) => left - right);
+  return normalized.sort((left, right) => left - right)
 }
 
 function updateSeasons(value) {
-  seasons.value = normalizeSeasons(value);
+  seasons.value = normalizeSeasons(value)
 }
 
 function normalizeSearchText(value) {
@@ -446,10 +448,6 @@ function normalizeSearchText(value) {
     .replace(/\s+/g, "")
 }
 
-function unwrap(result) {
-  return result?.data && typeof result.data === "object" && "success" in result.data ? result.data : result || {}
-}
-
 function candidateTitle(item) {
   if (!item) return ""
   const year = item.year ? ` (${item.year})` : ""
@@ -457,41 +455,41 @@ function candidateTitle(item) {
 }
 
 function targetTitle(item) {
-  return item?.target_kind === "subscribe" ? String(item.title || "指定订阅") : `TMDB · ${candidateTitle(item)}`;
+  return item?.target_kind === "subscribe" ? String(item.title || "指定订阅") : `TMDB · ${candidateTitle(item)}`
 }
 
 function findMatchingSubscribe(media, season = null) {
   const candidates = subscribes.value.filter((item) => {
-    if (String(item?.media_type || "") !== String(media?.media_type || "")) return false;
-    if (Number(item?.tmdb_id || 0) !== Number(media?.tmdb_id || 0)) return false;
-    return season === null || Number(item?.season || 0) === Number(season);
+    if (String(item?.media_type || "") !== String(media?.media_type || "")) return false
+    if (Number(item?.tmdb_id || 0) !== Number(media?.tmdb_id || 0)) return false
+    return season === null || Number(item?.season || 0) === Number(season)
   })
-  return candidates.length === 1 ? candidates[0] : null;
+  return candidates.length === 1 ? candidates[0] : null
 }
 
 function applyRecognizedMedia(media, seasonValues = []) {
-  const parsed = normalizeSeasons(seasonValues);
-  const matched = findMatchingSubscribe(media, parsed.length === 1 ? parsed[0] : null);
+  const parsed = normalizeSeasons(seasonValues)
+  const matched = findMatchingSubscribe(media, parsed.length === 1 ? parsed[0] : null)
   if (matched) {
     selectedTarget.value = {
       ...matched,
       target_kind: "subscribe",
       target_key: `subscribe:${matched.value}`,
     }
-    subscribeId.value = matched.value;
-    selectedMedia.value = matched;
-    parsedSeasons.value = parsed;
-    return;
+    subscribeId.value = matched.value
+    selectedMedia.value = matched
+    parsedSeasons.value = parsed
+    return
   }
   const target = {
     ...media,
     target_kind: "tmdb",
     target_key: `tmdb:${media.media_type}:${media.tmdb_id}`,
   }
-  selectedTarget.value = target;
-  subscribeId.value = null;
-  selectedMedia.value = target;
-  parsedSeasons.value = parsed;
+  selectedTarget.value = target
+  subscribeId.value = null
+  selectedMedia.value = target
+  parsedSeasons.value = parsed
 }
 
 function mediaItemKey(item) {
@@ -534,44 +532,42 @@ function toggleAllMediaItems(selected) {
 }
 
 function cloudResourceLabel(resource) {
-  const provider = cloudDrives.value.find((item) => item.value === resource?.provider);
-  return `网盘路径：[${provider?.title || resource?.provider || "目标网盘"}] ${resource?.path || "/"}`;
+  const provider = cloudDrives.value.find((item) => item.value === resource?.provider)
+  return `网盘路径：[${provider?.title || resource?.provider || "目标网盘"}] ${resource?.path || "/"}`
 }
 
 function updateResourceInput(value) {
-  const text = String(value || "");
+  const text = String(value || "")
   if (selectedCloudResource.value && text !== cloudResourceLabel(selectedCloudResource.value)) {
-    selectedCloudResource.value = null;
+    selectedCloudResource.value = null
   }
-  resourceLinks.value = text;
-  if (!selectedCloudResource.value) scheduleResourceTargetResolve(text);
+  resourceLinks.value = text
+  if (!selectedCloudResource.value) scheduleResourceTargetResolve(text)
 }
 
 function scheduleResourceTargetResolve(text) {
-  if (resourceResolveTimer) window.clearTimeout(resourceResolveTimer);
-  const revision = ++resourceResolveRevision;
-  if (!/(?:https?:\/\/|ed2k:\/\/|magnet:\?)/i.test(text)) return;
+  if (resourceResolveTimer) window.clearTimeout(resourceResolveTimer)
+  const revision = ++resourceResolveRevision
+  if (!/(?:https?:\/\/|ed2k:\/\/|magnet:\?)/i.test(text)) return
   resourceResolveTimer = window.setTimeout(() => {
-    resourceResolveTimer = null;
-    void resolveResourceTarget(text, revision);
+    resourceResolveTimer = null
+    void resolveResourceTarget(text, revision)
   }, 450)
 }
 
 async function resolveResourceTarget(text, revision) {
   try {
-    const result = unwrap(
-      await props.api.post(`plugin/${props.pluginId}/sync/manual/resolve`, {
-        resource_links: text.split(/\r?\n/),
-      }),
-    )
-    if (revision !== resourceResolveRevision) return;
-    if (result.success === false) throw new Error(result.message || "资源识别失败");
-    const data = result.data || {};
-    targetSearch.value = String(data.title || targetSearch.value).trim();
-    parsedSeasons.value = normalizeSeasons(data.seasons || []);
-    const matchedId = Number(data.subscribe_id || 0);
-    const matched = matchedId > 0 ? subscribes.value.find((item) => Number(item.value) === matchedId) : null;
-    tmdbCandidates.value = Array.isArray(data.candidates) ? data.candidates : [];
+    const result = await pluginApi.sync.manualResolve({
+      resource_links: text.split(/\r?\n/),
+    })
+    if (revision !== resourceResolveRevision) return
+    if (result.success === false) throw new Error(result.message || "资源识别失败")
+    const data = result.data || {}
+    targetSearch.value = String(data.title || targetSearch.value).trim()
+    parsedSeasons.value = normalizeSeasons(data.seasons || [])
+    const matchedId = Number(data.subscribe_id || 0)
+    const matched = matchedId > 0 ? subscribes.value.find((item) => Number(item.value) === matchedId) : null
+    tmdbCandidates.value = Array.isArray(data.candidates) ? data.candidates : []
     if (matched) {
       selectedTarget.value = {
         ...matched,
@@ -580,13 +576,13 @@ async function resolveResourceTarget(text, revision) {
         target_key: `subscribe:${matched.value}`,
       }
     } else if (tmdbCandidates.value.length === 1) {
-      applyRecognizedMedia(tmdbCandidates.value[0], parsedSeasons.value);
+      applyRecognizedMedia(tmdbCandidates.value[0], parsedSeasons.value)
     } else {
-      selectedTarget.value = null;
-      selectedMedia.value = null;
+      selectedTarget.value = null
+      selectedMedia.value = null
     }
   } catch (e) {
-    if (revision === resourceResolveRevision) error.value = e.message || "资源识别失败";
+    if (revision === resourceResolveRevision) error.value = e.message || "资源识别失败"
   }
 }
 
@@ -595,17 +591,17 @@ function parseCloudPathMedia(path) {
     .split("/")
     .map((value) => value.trim())
     .filter(Boolean)
-  const directoryName = segments[segments.length - 1] || "";
-  const marker = /\{\s*tmdb\s*id\s*[-_:]?\s*(\d+)\s*\}/i.exec(directoryName);
-  if (!marker) return null;
+  const directoryName = segments[segments.length - 1] || ""
+  const marker = /\{\s*tmdb\s*id\s*[-_:]?\s*(\d+)\s*\}/i.exec(directoryName)
+  if (!marker) return null
   let title = directoryName
     .slice(0, marker.index)
     .replace(/^\s*[A-Za-z]\s+(?=\p{Script=Han})/u, "")
     .replace(/[._\-\s]+$/g, "")
     .trim()
-  if (!title) return null;
-  const seasonMatch = /(?:^|[\s._()[\]-])S(?:eason)?\s*0*(\d{1,3})(?=$|[\s._()[\]E{-])/i.exec(directoryName);
-  const seasonNumber = seasonMatch ? Math.max(1, Number(seasonMatch[1])) : null;
+  if (!title) return null
+  const seasonMatch = /(?:^|[\s._()[\]-])S(?:eason)?\s*0*(\d{1,3})(?=$|[\s._()[\]E{-])/i.exec(directoryName)
+  const seasonNumber = seasonMatch ? Math.max(1, Number(seasonMatch[1])) : null
   return {
     tmdbId: Number(marker[1]),
     title,
@@ -615,80 +611,74 @@ function parseCloudPathMedia(path) {
 }
 
 async function requestTmdbCandidates(title, tmdbId = 0, mediaType = "") {
-  const result = unwrap(
-    await props.api.post(`plugin/${props.pluginId}/search/tmdb`, {
-      title,
-      tmdb_id: Number(tmdbId || 0) || null,
-      media_type: mediaType || null,
-    }),
-  )
-  if (result.success === false) throw new Error(result.message || "TMDB 搜索失败");
-  return Array.isArray(result.data?.items) ? result.data.items : [];
+  const result = await pluginApi.search.tmdb({
+    title,
+    tmdb_id: Number(tmdbId || 0) || null,
+    media_type: mediaType || null,
+  })
+  if (result.success === false) throw new Error(result.message || "TMDB 搜索失败")
+  return Array.isArray(result.data?.items) ? result.data.items : []
 }
 
 async function loadTmdbSeasons(target) {
-  const revision = ++tmdbSeasonRevision;
-  availableSeasons.value = [];
-  seasons.value = [];
-  if (target?.media_type !== "tv" || !target?.tmdb_id) return;
+  const revision = ++tmdbSeasonRevision
+  availableSeasons.value = []
+  seasons.value = []
+  if (target?.media_type !== "tv" || !target?.tmdb_id) return
   const applySeasons = (values) => {
-    availableSeasons.value = normalizeSeasons(values);
-    const parsed = normalizeSeasons(parsedSeasons.value);
-    seasons.value = parsed.filter((season) => availableSeasons.value.includes(season));
+    availableSeasons.value = normalizeSeasons(values)
+    const parsed = normalizeSeasons(parsedSeasons.value)
+    seasons.value = parsed.filter((season) => availableSeasons.value.includes(season))
   }
   if (Array.isArray(target.seasons) && target.seasons.length) {
-    applySeasons(target.seasons);
-    return;
+    applySeasons(target.seasons)
+    return
   }
-  loadingTmdbSeasons.value = true;
+  loadingTmdbSeasons.value = true
   try {
-    const result = unwrap(
-      await props.api.post(`plugin/${props.pluginId}/search/tmdb`, {
-        tmdb_id: target.tmdb_id,
-        title: target.title,
-        original_title: target.original_title,
-        year: target.year,
-        media_type: "tv",
-      }),
-    )
-    if (revision !== tmdbSeasonRevision) return;
-    if (result.success === false) throw new Error(result.message || "TMDB 季列表查询失败");
-    applySeasons(result.data?.seasons || result.data?.items?.[0]?.seasons || []);
+    const result = await pluginApi.search.tmdb({
+      tmdb_id: target.tmdb_id,
+      title: target.title,
+      original_title: target.original_title,
+      year: target.year,
+      media_type: "tv",
+    })
+    if (revision !== tmdbSeasonRevision) return
+    if (result.success === false) throw new Error(result.message || "TMDB 季列表查询失败")
+    applySeasons(result.data?.seasons || result.data?.items?.[0]?.seasons || [])
   } catch (e) {
-    if (revision === tmdbSeasonRevision) error.value = e.message || "TMDB 季列表查询失败";
+    if (revision === tmdbSeasonRevision) error.value = e.message || "TMDB 季列表查询失败"
   } finally {
-    if (revision === tmdbSeasonRevision) loadingTmdbSeasons.value = false;
+    if (revision === tmdbSeasonRevision) loadingTmdbSeasons.value = false
   }
 }
 
 async function resolveCloudPathMedia(path, revision) {
-  const hint = parseCloudPathMedia(path);
-  if (!hint) return;
-  subscribeId.value = null;
-  targetSearch.value = hint.title;
-  selectedMedia.value = null;
-  selectedTarget.value = null;
-  parsedSeasons.value = hint.season ? [hint.season] : [];
-  searchingTmdb.value = true;
-  error.value = "";
+  const hint = parseCloudPathMedia(path)
+  if (!hint) return
+  subscribeId.value = null
+  targetSearch.value = hint.title
+  selectedMedia.value = null
+  selectedTarget.value = null
+  parsedSeasons.value = hint.season ? [hint.season] : []
+  searchingTmdb.value = true
+  error.value = ""
   try {
-    const result = unwrap(
-      await props.api.post(`plugin/${props.pluginId}/sync/manual/resolve`, {
-        cloud_path: path,
-        cloud_provider: selectedCloudResource.value?.provider || null,
-        title: hint.title,
-        tmdb_id: hint.tmdbId,
-        media_type: hint.preferTv ? "tv" : null,
-      }),
-    )
-    if (revision !== cloudMediaResolveRevision) return;
-    if (result.success === false) throw new Error(result.message || "网盘路径媒体识别失败");
-    const data = result.data || {};
-    targetSearch.value = String(data.title || hint.title).trim();
-    parsedSeasons.value = normalizeSeasons(data.seasons || []);
-    tmdbCandidates.value = Array.isArray(data.candidates) ? data.candidates : [];
-    const matchedId = Number(data.subscribe_id || 0);
-    const matchedSubscribe = matchedId > 0 ? subscribes.value.find((item) => Number(item.value) === matchedId) : null;
+    const result = await pluginApi.sync.manualResolve({
+      cloud_path: path,
+      cloud_provider: selectedCloudResource.value?.provider || null,
+      title: hint.title,
+      tmdb_id: hint.tmdbId,
+      media_type: hint.preferTv ? "tv" : null,
+    })
+    if (revision !== cloudMediaResolveRevision) return
+    if (result.success === false) throw new Error(result.message || "网盘路径媒体识别失败")
+    const data = result.data || {}
+    targetSearch.value = String(data.title || hint.title).trim()
+    parsedSeasons.value = normalizeSeasons(data.seasons || [])
+    tmdbCandidates.value = Array.isArray(data.candidates) ? data.candidates : []
+    const matchedId = Number(data.subscribe_id || 0)
+    const matchedSubscribe = matchedId > 0 ? subscribes.value.find((item) => Number(item.value) === matchedId) : null
     if (matchedSubscribe) {
       selectedTarget.value = {
         ...matchedSubscribe,
@@ -696,48 +686,48 @@ async function resolveCloudPathMedia(path, revision) {
         target_kind: "subscribe",
         target_key: `subscribe:${matchedSubscribe.value}`,
       }
-      return;
+      return
     }
-    const exactMatches = tmdbCandidates.value.filter((item) => Number(item?.tmdb_id || 0) === hint.tmdbId);
+    const exactMatches = tmdbCandidates.value.filter((item) => Number(item?.tmdb_id || 0) === hint.tmdbId)
     const matchedMedia =
       (hint.preferTv && exactMatches.find((item) => item.media_type === "tv")) || exactMatches[0] || null
     if (!matchedMedia) {
-      throw new Error(`已识别 TMDB ID ${hint.tmdbId}，但未查询到对应媒体，请手动选择`);
+      throw new Error(`已识别 TMDB ID ${hint.tmdbId}，但未查询到对应媒体，请手动选择`)
     }
-    applyRecognizedMedia(matchedMedia, parsedSeasons.value);
+    applyRecognizedMedia(matchedMedia, parsedSeasons.value)
   } catch (e) {
     if (!isCancellationError(e) && props.modelValue && revision === cloudMediaResolveRevision) {
-      error.value = e.message || "网盘路径媒体识别失败";
+      error.value = e.message || "网盘路径媒体识别失败"
     }
   } finally {
-    if (revision === cloudMediaResolveRevision) searchingTmdb.value = false;
+    if (revision === cloudMediaResolveRevision) searchingTmdb.value = false
   }
 }
 
 function selectCloudPath(path, provider) {
-  if (resourceResolveTimer) window.clearTimeout(resourceResolveTimer);
-  resourceResolveRevision += 1;
+  if (resourceResolveTimer) window.clearTimeout(resourceResolveTimer)
+  resourceResolveRevision += 1
   selectedCloudResource.value = {
     provider: String(provider || targetCloudDrive.value || "").trim(),
     path: String(path || "/").trim() || "/",
   }
-  resourceLinks.value = cloudResourceLabel(selectedCloudResource.value);
-  cloudDirectoryVisible.value = false;
-  cloudMediaResolveRevision += 1;
-  searchingTmdb.value = false;
-  void resolveCloudPathMedia(selectedCloudResource.value.path, cloudMediaResolveRevision);
+  resourceLinks.value = cloudResourceLabel(selectedCloudResource.value)
+  cloudDirectoryVisible.value = false
+  cloudMediaResolveRevision += 1
+  searchingTmdb.value = false
+  void resolveCloudPathMedia(selectedCloudResource.value.path, cloudMediaResolveRevision)
 }
 
 function clearCloudResource() {
-  cloudMediaResolveRevision += 1;
-  searchingTmdb.value = false;
-  selectedCloudResource.value = null;
-  resourceLinks.value = "";
+  cloudMediaResolveRevision += 1
+  searchingTmdb.value = false
+  selectedCloudResource.value = null
+  resourceLinks.value = ""
 }
 
 function matchInitialSubscribe() {
   subscribeId.value = null
-  selectedTarget.value = null;
+  selectedTarget.value = null
   if (!props.initialMedia) return
   const media = props.initialMedia
   const targetTmdbId = Number(media.tmdb_id || 0)
@@ -756,13 +746,13 @@ function matchInitialSubscribe() {
   const seasonMatch = targetSeason > 0 ? matches.find((item) => Number(item.season || 0) === targetSeason) : null
   subscribeId.value = (seasonMatch || matches[0])?.value || null
   if (subscribeId.value) {
-    const matched = matches.find((item) => item.value === subscribeId.value);
+    const matched = matches.find((item) => item.value === subscribeId.value)
     selectedTarget.value = {
       ...matched,
       target_kind: "subscribe",
       target_key: `subscribe:${matched.value}`,
     }
-    selectedMedia.value = matched;
+    selectedMedia.value = matched
   } else {
     const media = {
       ...media,
@@ -773,9 +763,9 @@ function matchInitialSubscribe() {
       target_kind: "tmdb",
       target_key: `tmdb:${media.media_type}:${media.tmdb_id}`,
     }
-    selectedMedia.value = selectedTarget.value;
-    seasons.value = media.season ? [Number(media.season)] : [];
-    parsedSeasons.value = [...seasons.value];
+    selectedMedia.value = selectedTarget.value
+    seasons.value = media.season ? [Number(media.season)] : []
+    parsedSeasons.value = [...seasons.value]
   }
 }
 
@@ -784,11 +774,9 @@ async function resolveInitialMediaFallback() {
     return
   const media = props.initialMedia
   try {
-    const result = unwrap(
-      await props.api.post(`plugin/${props.pluginId}/search/tmdb`, {
-        title: media.title,
-      }),
-    )
+    const result = await pluginApi.search.tmdb({
+      title: media.title,
+    })
     if (result.success === false) throw new Error(result.message || "TMDB 匹配失败")
     const candidates = Array.isArray(result.data?.items) ? result.data.items : []
     const targetTitle = normalizeSearchText(media.title)
@@ -813,7 +801,7 @@ async function resolveInitialMediaFallback() {
       tmdb_id: matched.tmdb_id,
       media_type: media.media_type || matched.media_type,
     }
-    applyRecognizedMedia(resolved, media.season ? [media.season] : []);
+    applyRecognizedMedia(resolved, media.season ? [media.season] : [])
   } catch (e) {
     error.value = e.message || "历史媒体自动匹配失败"
   }
@@ -823,13 +811,13 @@ async function loadOptions() {
   loadingOptions.value = true
   error.value = ""
   try {
-    const result = unwrap(await props.api.get(`plugin/${props.pluginId}/ui_options?scope=subscriptions`))
+    const result = await pluginApi.config.uiOptions("subscriptions")
     if (result.success === false) throw new Error(result.message || "加载订阅失败")
     const data = result.data?.data || result.data || result
     subscribes.value = Array.isArray(data.subscribes) ? data.subscribes : []
-    cloudDrives.value = Array.isArray(data.cloud_drives) ? data.cloud_drives : [];
-    targetCloudDrive.value = String(data.target_cloud_drive || "");
-    enableCloudUpgrade.value = Boolean(data.enable_cloud_upgrade);
+    cloudDrives.value = Array.isArray(data.cloud_drives) ? data.cloud_drives : []
+    targetCloudDrive.value = String(data.target_cloud_drive || "")
+    enableCloudUpgrade.value = Boolean(data.enable_cloud_upgrade)
     crossTransferMediaTypes.value = Array.isArray(data.cross_transfer_media_types)
       ? data.cross_transfer_media_types.map((value) => String(value))
       : []
@@ -845,7 +833,7 @@ async function loadMediaServers() {
   loadingMediaServers.value = true
   error.value = ""
   try {
-    const result = unwrap(await props.api.get(`plugin/${props.pluginId}/media/servers`))
+    const result = await pluginApi.media.servers()
     if (result.success === false) throw new Error(result.message || "加载媒体服务器失败")
     mediaServers.value = result.data?.servers || []
     if (mediaServers.value.length === 1) mediaServer.value = mediaServers.value[0].value
@@ -869,8 +857,7 @@ async function searchMediaContents(tmdb = null) {
     } else {
       params.keyword = mediaKeyword.value.trim()
     }
-    const query = new URLSearchParams(params)
-    const result = unwrap(await props.api.get(`plugin/${props.pluginId}/media/content?${query}`))
+    const result = await pluginApi.media.content(params)
     if (mediaServer.value !== selectedServer) return
     if (result.success === false) throw new Error(result.message || "搜索媒体库失败")
     mediaServers.value = result.data?.servers || mediaServers.value
@@ -878,7 +865,7 @@ async function searchMediaContents(tmdb = null) {
     selectedMediaItems.value = []
   } catch (e) {
     if (!isCancellationError(e) && props.modelValue) {
-      error.value = e.message || "搜索媒体库失败";
+      error.value = e.message || "搜索媒体库失败"
     }
   } finally {
     loadingMedia.value = false
@@ -891,18 +878,16 @@ async function matchUpgradeTmdb() {
   matchingUpgradeTmdb.value = true
   error.value = ""
   try {
-    const result = unwrap(
-      await props.api.post(`plugin/${props.pluginId}/search/tmdb`, {
-        title: mediaKeyword.value.trim(),
-      }),
-    )
+    const result = await pluginApi.search.tmdb({
+      title: mediaKeyword.value.trim(),
+    })
     if (mediaServer.value !== selectedServer) return
     if (result.success === false) throw new Error(result.message || "TMDB 匹配失败")
     upgradeTmdbCandidates.value = result.data?.items || []
     selectedUpgradeTmdb.value = upgradeTmdbCandidates.value.length === 1 ? upgradeTmdbCandidates.value[0] : null
   } catch (e) {
     if (!isCancellationError(e) && props.modelValue) {
-      error.value = e.message || "TMDB 匹配失败";
+      error.value = e.message || "TMDB 匹配失败"
     }
   } finally {
     matchingUpgradeTmdb.value = false
@@ -910,15 +895,15 @@ async function matchUpgradeTmdb() {
 }
 
 async function searchTmdb() {
-  if (!targetSearch.value.trim() || searchingTmdb.value) return;
+  if (!targetSearch.value.trim() || searchingTmdb.value) return
   searchingTmdb.value = true
   error.value = ""
   try {
-    tmdbCandidates.value = await requestTmdbCandidates(targetSearch.value.trim());
-    if (tmdbCandidates.value.length === 1) applyRecognizedMedia(tmdbCandidates.value[0], parsedSeasons.value);
+    tmdbCandidates.value = await requestTmdbCandidates(targetSearch.value.trim())
+    if (tmdbCandidates.value.length === 1) applyRecognizedMedia(tmdbCandidates.value[0], parsedSeasons.value)
   } catch (e) {
     if (!isCancellationError(e) && props.modelValue) {
-      error.value = e.message || "TMDB 搜索失败";
+      error.value = e.message || "TMDB 搜索失败"
     }
   } finally {
     searchingTmdb.value = false
@@ -947,21 +932,19 @@ async function submit() {
   try {
     let result
     if (actionMode.value === "upgrade") {
-      result = unwrap(
-        await props.api.post(`plugin/${props.pluginId}/history/upgrade`, {
-          source: "media_server",
-          items: selectedMediaItems.value.map((item) => ({
-            server: item.server,
-            item_id: item.item_id,
-            kind: item.kind,
-            season: item.season,
-            episode: item.episode,
-          })),
-        }),
-      )
+      result = await pluginApi.history.upgrade({
+        source: "media_server",
+        items: selectedMediaItems.value.map((item) => ({
+          server: item.server,
+          item_id: item.item_id,
+          kind: item.kind,
+          season: item.season,
+          episode: item.episode,
+        })),
+      })
     } else {
-      const target = selectedTarget.value;
-      const selectedSeasons = normalizeSeasons(seasons.value);
+      const target = selectedTarget.value
+      const selectedSeasons = normalizeSeasons(seasons.value)
       const isSingleSubscriptionSeason = Boolean(
         target?.target_kind === "subscribe" &&
         (target.media_type !== "tv" ||
@@ -969,28 +952,26 @@ async function submit() {
       )
       const media = target
         ? {
-          ...target,
-          seasons: selectedSeasons,
+            ...target,
+            seasons: selectedSeasons,
           }
         : null
-      result = unwrap(
-        await props.api.post(`plugin/${props.pluginId}/sync/manual`, {
-          subscribe_id: isSingleSubscriptionSeason ? target.value : null,
-          media: isSingleSubscriptionSeason ? null : media,
-          resource_links: selectedCloudResource.value ? [] : resourceLinks.value.split(/\r?\n/),
-          cloud_path: selectedCloudResource.value?.path || null,
-          cloud_provider: selectedCloudResource.value?.provider || null,
-          manual_upgrade: manualUpgrade.value,
-          skip_history: skipHistory.value,
-        }),
-      )
+      result = await pluginApi.sync.manual({
+        subscribe_id: isSingleSubscriptionSeason ? target.value : null,
+        media: isSingleSubscriptionSeason ? null : media,
+        resource_links: selectedCloudResource.value ? [] : resourceLinks.value.split(/\r?\n/),
+        cloud_path: selectedCloudResource.value?.path || null,
+        cloud_provider: selectedCloudResource.value?.provider || null,
+        manual_upgrade: manualUpgrade.value,
+        skip_history: skipHistory.value,
+      })
     }
     if (result.success === false) throw new Error(result.message || "提交失败")
     emit("started", result.message || "任务已启动")
     resourceLinks.value = ""
-    selectedCloudResource.value = null;
+    selectedCloudResource.value = null
     manualUpgrade.value = false
-    skipHistory.value = false;
+    skipHistory.value = false
     selectedMediaItems.value = []
     confirmVisible.value = false
     emit("update:modelValue", false)
@@ -1008,15 +989,15 @@ watch(actionMode, (value) => {
 
 watch(selectedTarget, (value) => {
   if (!value) {
-    subscribeId.value = null;
-    selectedMedia.value = null;
-    availableSeasons.value = [];
-    seasons.value = [];
-    return;
+    subscribeId.value = null
+    selectedMedia.value = null
+    availableSeasons.value = []
+    seasons.value = []
+    return
   }
-  subscribeId.value = value.target_kind === "subscribe" ? value.value : null;
-  selectedMedia.value = value;
-  void loadTmdbSeasons(value);
+  subscribeId.value = value.target_kind === "subscribe" ? value.value : null
+  selectedMedia.value = value
+  void loadTmdbSeasons(value)
 })
 
 watch(mediaServer, () => {
@@ -1042,28 +1023,28 @@ watch(
   () => props.modelValue,
   async (visible) => {
     if (visible) {
-      cloudMediaResolveRevision += 1;
-      actionMode.value = "links";
-      selectedCloudResource.value = null;
-      skipHistory.value = false;
-      cloudDirectoryVisible.value = false;
+      cloudMediaResolveRevision += 1
+      actionMode.value = "links"
+      selectedCloudResource.value = null
+      skipHistory.value = false
+      cloudDirectoryVisible.value = false
       mediaKeyword.value = String(props.initialMedia?.title || "").trim()
-      targetSearch.value = "";
+      targetSearch.value = ""
       tmdbCandidates.value = []
-      selectedTarget.value = null;
+      selectedTarget.value = null
       selectedMedia.value = null
-      seasons.value = [];
-      availableSeasons.value = [];
-      parsedSeasons.value = [];
+      seasons.value = []
+      availableSeasons.value = []
+      parsedSeasons.value = []
       mediaContents.value = []
       selectedMediaItems.value = []
       upgradeTmdbCandidates.value = []
       selectedUpgradeTmdb.value = null
       confirmVisible.value = false
-      targetSearch.value = "";
+      targetSearch.value = ""
       subscribeId.value = null
       await loadOptions()
-      actionMode.value = props.initialMode === "upgrade" && enableCloudUpgrade.value ? "upgrade" : "links";
+      actionMode.value = props.initialMode === "upgrade" && enableCloudUpgrade.value ? "upgrade" : "links"
       matchInitialSubscribe()
       await resolveInitialMediaFallback()
       if (actionMode.value === "upgrade") {
@@ -1073,10 +1054,10 @@ watch(
         }
       }
     } else {
-      searchingTmdb.value = false;
+      searchingTmdb.value = false
       error.value = ""
       confirmVisible.value = false
-      cloudDirectoryVisible.value = false;
+      cloudDirectoryVisible.value = false
     }
   },
   { immediate: true },

@@ -29,24 +29,22 @@
       </v-card-text>
       <v-card-actions class="px-5 pb-4 pt-1 justify-end ga-2">
         <v-btn variant="text" size="small" @click="model = false">取消</v-btn>
-        <v-btn variant="elevated" size="small" :loading="loading" @click="$emit('confirm')">
-          确认跨盘转存
-        </v-btn>
+        <v-btn variant="elevated" size="small" :loading="loading" @click="$emit('confirm')">确认跨盘转存</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 <script setup>
-import {computed} from "vue";
+import { computed } from "vue"
 
 const props = defineProps({
   modelValue: Boolean,
-  sourceName: {type: String, default: ""},
-  target: {type: String, default: ""},
-  drives: {type: Array, default: () => []},
-  icon: {type: String, default: "mdi-cloud"},
+  sourceName: { type: String, default: "" },
+  target: { type: String, default: "" },
+  drives: { type: Array, default: () => [] },
+  icon: { type: String, default: "mdi-cloud" },
   loading: Boolean,
-});
-const emit = defineEmits(["update:modelValue", "update:target", "confirm"]);
-const model = computed({get: () => props.modelValue, set: (value) => emit("update:modelValue", value)});
+})
+const emit = defineEmits(["update:modelValue", "update:target", "confirm"])
+const model = computed({ get: () => props.modelValue, set: (value) => emit("update:modelValue", value) })
 </script>

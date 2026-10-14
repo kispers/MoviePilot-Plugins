@@ -257,9 +257,7 @@
               多网盘 ({{ item.target_drives.length }})
             </v-chip>
           </div>
-          <div v-else class="text-caption text-medium-emphasis">
-            --
-          </div>
+          <div v-else class="text-caption text-medium-emphasis">--</div>
         </template>
 
         <template #item.resource_types="{ item }">
@@ -367,140 +365,149 @@
             <td :colspan="columns.length" class="pa-0">
               <v-table density="compact" class="detail-table">
                 <thead>
-                <tr>
-                  <th class="subtable-select-th" style="width: 44px; padding: 0 4px;"></th>
-                  <th>文件名称</th>
-                  <th>目标网盘</th>
-                  <th>资源类型</th>
-                  <th>视频格式</th>
-                  <th>来源渠道</th>
-                  <th>资源链接</th>
-                  <th>资源大小</th>
-                  <th>任务状态</th>
-                  <th>完成时间</th>
-                  <th class="action-column">操作</th>
-                </tr>
+                  <tr>
+                    <th class="subtable-select-th" style="width: 44px; padding: 0 4px"></th>
+                    <th>文件名称</th>
+                    <th>目标网盘</th>
+                    <th>资源类型</th>
+                    <th>视频格式</th>
+                    <th>来源渠道</th>
+                    <th>资源链接</th>
+                    <th>资源大小</th>
+                    <th>任务状态</th>
+                    <th>完成时间</th>
+                    <th class="action-column">操作</th>
+                  </tr>
                 </thead>
                 <tbody>
-                <tr v-for="(record, index) in item.records" :key="recordKey(record, index)">
-                  <td class="subtable-select-td" style="width: 44px; padding: 0 4px;">
-                    <v-checkbox-btn
-                      :model-value="isRecordSelected(record)"
-                      :disabled="!canDeleteRecord(record)"
-                      density="compact"
-                      color="primary"
-                      @update:model-value="toggleRecordSelect(record, item, $event)"
-                      @click.stop />
-                  </td>
-                  <td>
-                    <div class="d-flex align-center ga-1" style="min-width: 0; overflow: hidden;">
-                      <span class="record-name" :title="record.display_name || '-'">
-                        {{ record.display_name || "-" }}
-                      </span>
-                      <v-chip v-if="record.upgrade" size="x-small" color="warning" variant="tonal"
-                              class="flex-shrink-0">
-                        洗版
-                        <v-tooltip activator="parent" location="top">
-                          {{ record.upgrade_version_info }}
-                        </v-tooltip>
-                      </v-chip>
-                      <v-chip v-if="record.is_cross_transfer" size="x-small" color="info" variant="tonal"
-                              class="flex-shrink-0">
-                        跨盘
-                        <v-tooltip activator="parent" location="top">
-                          {{ record.cross_transfer_title }}
-                        </v-tooltip>
-                      </v-chip>
-                    </div>
-                    <div
+                  <tr v-for="(record, index) in item.records" :key="recordKey(record, index)">
+                    <td class="subtable-select-td" style="width: 44px; padding: 0 4px">
+                      <v-checkbox-btn
+                        :model-value="isRecordSelected(record)"
+                        :disabled="!canDeleteRecord(record)"
+                        density="compact"
+                        color="primary"
+                        @update:model-value="toggleRecordSelect(record, item, $event)"
+                        @click.stop />
+                    </td>
+                    <td>
+                      <div class="d-flex align-center ga-1" style="min-width: 0; overflow: hidden">
+                        <span class="record-name" :title="record.display_name || '-'">
+                          {{ record.display_name || "-" }}
+                        </span>
+                        <v-chip
+                          v-if="record.upgrade"
+                          size="x-small"
+                          color="warning"
+                          variant="tonal"
+                          class="flex-shrink-0">
+                          洗版
+                          <v-tooltip activator="parent" location="top">
+                            {{ record.upgrade_version_info }}
+                          </v-tooltip>
+                        </v-chip>
+                        <v-chip
+                          v-if="record.is_cross_transfer"
+                          size="x-small"
+                          color="info"
+                          variant="tonal"
+                          class="flex-shrink-0">
+                          跨盘
+                          <v-tooltip activator="parent" location="top">
+                            {{ record.cross_transfer_title }}
+                          </v-tooltip>
+                        </v-chip>
+                      </div>
+                      <div
                         v-if="record.type !== '电影'"
                         class="record-file-name text-caption text-medium-emphasis"
                         :title="record.title || item.title || '-'">
-                      {{ record.title || item.title || "-" }}
-                    </div>
-                  </td>
-                  <td>
-                    <v-chip size="x-small" variant="tonal"
-                            :color="driveColor(record.cloud_drive_name || record.target_drive_name)">
-                      {{ record.cloud_drive_name || record.target_drive_name || "-" }}
-                    </v-chip>
-                  </td>
-                  <td>
-                    <v-chip size="x-small" variant="tonal" :color="resourceTypeColor(resourceType(record))">
-                      {{ resourceTypeLabel(resourceType(record)) }}
-                    </v-chip>
-                  </td>
-                  <td>
-                    <v-chip size="x-small" variant="tonal" :color="formatColor(record.file_extension)">
-                      {{ record.file_extension || "-" }}
-                    </v-chip>
-                  </td>
-                  <td>
-                    <a
-                      v-if="record.source_link"
-                      :href="record.source_link"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-decoration-none"
-                      title="打开来源详情页"
-                      @click.stop>
+                        {{ record.title || item.title || "-" }}
+                      </div>
+                    </td>
+                    <td>
                       <v-chip
                         size="x-small"
                         variant="tonal"
+                        :color="driveColor(record.cloud_drive_name || record.target_drive_name)">
+                        {{ record.cloud_drive_name || record.target_drive_name || "-" }}
+                      </v-chip>
+                    </td>
+                    <td>
+                      <v-chip size="x-small" variant="tonal" :color="resourceTypeColor(resourceType(record))">
+                        {{ resourceTypeLabel(resourceType(record)) }}
+                      </v-chip>
+                    </td>
+                    <td>
+                      <v-chip size="x-small" variant="tonal" :color="formatColor(record.file_extension)">
+                        {{ record.file_extension || "-" }}
+                      </v-chip>
+                    </td>
+                    <td>
+                      <a
+                        v-if="record.source_link"
+                        :href="record.source_link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-decoration-none"
+                        title="打开来源详情页"
+                        @click.stop>
+                        <v-chip
+                          size="x-small"
+                          variant="tonal"
+                          :color="sourceColor(record.source)"
+                          :prepend-icon="sourceIcon(record.source)"
+                          class="cursor-pointer">
+                          {{ sourceLabel(record.source) }}
+                          <v-icon icon="mdi-open-in-new" size="10" class="ml-1" />
+                        </v-chip>
+                      </a>
+                      <v-chip
+                        v-else
+                        size="x-small"
+                        variant="tonal"
                         :color="sourceColor(record.source)"
-                        :prepend-icon="sourceIcon(record.source)"
-                        class="cursor-pointer">
+                        :prepend-icon="sourceIcon(record.source)">
                         {{ sourceLabel(record.source) }}
-                        <v-icon icon="mdi-open-in-new" size="10" class="ml-1" />
                       </v-chip>
-                    </a>
-                    <v-chip
-                      v-else
-                      size="x-small"
-                      variant="tonal"
-                      :color="sourceColor(record.source)"
-                      :prepend-icon="sourceIcon(record.source)">
-                      {{ sourceLabel(record.source) }}
-                    </v-chip>
-                  </td>
-                  <td>
-                    <a
-                      v-if="record.resource_link"
-                      :href="record.resource_link"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-decoration-none"
-                      title="打开资源链接"
-                      @click.stop>
-                      <v-chip size="x-small" variant="tonal" color="#00acc1" prepend-icon="mdi-link-variant"
-                              class="cursor-pointer">
-                        打开
-                        <v-icon icon="mdi-open-in-new" size="10" class="ml-1" />
+                    </td>
+                    <td>
+                      <a
+                        v-if="record.resource_link"
+                        :href="record.resource_link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-decoration-none"
+                        title="打开资源链接"
+                        @click.stop>
+                        <v-chip
+                          size="x-small"
+                          variant="tonal"
+                          color="#00acc1"
+                          prepend-icon="mdi-link-variant"
+                          class="cursor-pointer">
+                          打开
+                          <v-icon icon="mdi-open-in-new" size="10" class="ml-1" />
+                        </v-chip>
+                      </a>
+                      <span v-else class="text-medium-emphasis">-</span>
+                    </td>
+                    <td class="text-no-wrap">
+                      {{ formatSize(record.file_size) }}
+                    </td>
+                    <td>
+                      <v-chip :color="statusColor(record.status)" size="x-small" variant="tonal">
+                        {{ record.status }}
+                        <v-tooltip v-if="record.failure_reason" activator="parent" location="top" max-width="380">
+                          {{ record.failure_reason }}
+                        </v-tooltip>
                       </v-chip>
-                    </a>
-                    <span v-else class="text-medium-emphasis">-</span>
-                  </td>
-                  <td class="text-no-wrap">
-                    {{ formatSize(record.file_size) }}
-                  </td>
-                  <td>
-                    <v-chip :color="statusColor(record.status)" size="x-small" variant="tonal">
-                      {{ record.status }}
-                      <v-tooltip
-                        v-if="record.failure_reason"
-                        activator="parent"
-                        location="top"
-                        max-width="380"
-                      >
-                        {{ record.failure_reason }}
-                      </v-tooltip>
-                    </v-chip>
-                  </td>
-                  <td class="text-no-wrap">{{ record.time || "-" }}</td>
-                  <td class="action-column">
-                    <div class="action-buttons">
-                      <v-btn
-                        v-if="props.enableCloudUpgrade && canUpgradeRecord(record)"
+                    </td>
+                    <td class="text-no-wrap">{{ record.time || "-" }}</td>
+                    <td class="action-column">
+                      <div class="action-buttons">
+                        <v-btn
+                          v-if="props.enableCloudUpgrade && canUpgradeRecord(record)"
                           icon="mdi-auto-fix"
                           color="warning"
                           variant="text"
@@ -508,7 +515,7 @@
                           :loading="upgradingKey === historyUpgradeRecordKey(record)"
                           title="洗版此集"
                           @click.stop="upgradeRecord(record)" />
-                      <v-btn
+                        <v-btn
                           icon="mdi-reload"
                           color="primary"
                           variant="text"
@@ -517,7 +524,7 @@
                           :loading="retryingKey === historyRetryKey(record)"
                           :title="retryTitle(record)"
                           @click.stop="emit('retry', record)" />
-                      <v-btn
+                        <v-btn
                           icon="mdi-delete-outline"
                           color="error"
                           variant="text"
@@ -526,9 +533,9 @@
                           :loading="deletingKey === historyRetryKey(record)"
                           :title="deleteTitle(record)"
                           @click.stop="emit('delete', record)" />
-                    </div>
-                  </td>
-                </tr>
+                      </div>
+                    </td>
+                  </tr>
                 </tbody>
               </v-table>
             </td>
@@ -648,40 +655,35 @@
                       @update:model-value="toggleRecordSelect(record, item, $event)"
                       @click.stop />
                     <div class="history-mobile-record-body">
-                    <div class="history-mobile-record-name-line">
-                    <span class="record-name" :title="record.display_name || '-'">
-                      {{ record.display_name || "-" }}
-                    </span>
-                    <v-chip v-if="record.upgrade" size="x-small" color="warning" variant="tonal">
-                      洗版
-                      <v-tooltip activator="parent" location="top">
-                        {{ record.upgrade_version_info }}
-                      </v-tooltip>
-                    </v-chip>
-                    <v-chip v-if="record.is_cross_transfer" size="x-small" color="info" variant="tonal">
-                      跨盘
-                      <v-tooltip activator="parent" location="top">
-                        {{ record.cross_transfer_title }}
-                      </v-tooltip>
-                    </v-chip>
-                    <v-chip :color="statusColor(record.status)" size="x-small" variant="tonal">
-                      {{ record.status }}
-                      <v-tooltip
-                        v-if="record.failure_reason"
-                        activator="parent"
-                        location="top"
-                        max-width="380"
-                      >
-                        {{ record.failure_reason }}
-                      </v-tooltip>
-                    </v-chip>
-                    </div>
-                    <div
-                      v-if="record.type !== '电影'"
-                      class="history-mobile-file text-caption text-medium-emphasis"
-                      :title="record.title || item.title || '-'">
-                      {{ record.title || item.title || "-" }}
-                    </div>
+                      <div class="history-mobile-record-name-line">
+                        <span class="record-name" :title="record.display_name || '-'">
+                          {{ record.display_name || "-" }}
+                        </span>
+                        <v-chip v-if="record.upgrade" size="x-small" color="warning" variant="tonal">
+                          洗版
+                          <v-tooltip activator="parent" location="top">
+                            {{ record.upgrade_version_info }}
+                          </v-tooltip>
+                        </v-chip>
+                        <v-chip v-if="record.is_cross_transfer" size="x-small" color="info" variant="tonal">
+                          跨盘
+                          <v-tooltip activator="parent" location="top">
+                            {{ record.cross_transfer_title }}
+                          </v-tooltip>
+                        </v-chip>
+                        <v-chip :color="statusColor(record.status)" size="x-small" variant="tonal">
+                          {{ record.status }}
+                          <v-tooltip v-if="record.failure_reason" activator="parent" location="top" max-width="380">
+                            {{ record.failure_reason }}
+                          </v-tooltip>
+                        </v-chip>
+                      </div>
+                      <div
+                        v-if="record.type !== '电影'"
+                        class="history-mobile-file text-caption text-medium-emphasis"
+                        :title="record.title || item.title || '-'">
+                        {{ record.title || item.title || "-" }}
+                      </div>
                     </div>
                     <v-spacer />
                     <div class="action-buttons history-mobile-actions">
@@ -764,8 +766,8 @@
 </template>
 
 <script setup>
-import {computed, ref, watch} from "vue";
-import {useDisplay} from "vuetify";
+import { computed, ref, watch } from "vue"
+import { useDisplay } from "vuetify"
 import {
   getDriveColor,
   getResourceTypeName,
@@ -773,21 +775,21 @@ import {
   getSourceIcon,
   getSourceName,
   getTypeColor,
-} from "../../composables/resourceUtils";
+} from "../../composables/resourceUtils"
 
 const props = defineProps({
-  items: {type: Array, default: () => []},
-  page: {type: Number, default: 1},
-  pageSize: {type: Number, default: 10},
-  total: {type: Number, default: 0},
-  totalPages: {type: Number, default: 1},
-  filterOptions: {type: Object, default: () => ({})},
-  embyPlayItems: {type: Object, default: () => ({})},
+  items: { type: Array, default: () => [] },
+  page: { type: Number, default: 1 },
+  pageSize: { type: Number, default: 10 },
+  total: { type: Number, default: 0 },
+  totalPages: { type: Number, default: 1 },
+  filterOptions: { type: Object, default: () => ({}) },
+  embyPlayItems: { type: Object, default: () => ({}) },
   loading: Boolean,
   reconciling: Boolean,
-  retryingKey: {type: String, default: ""},
-  notifyingKey: {type: String, default: ""},
-  upgradingKey: {type: String, default: ""},
+  retryingKey: { type: String, default: "" },
+  notifyingKey: { type: String, default: "" },
+  upgradingKey: { type: String, default: "" },
   enableCloudUpgrade: Boolean,
 })
 const emit = defineEmits([
@@ -803,42 +805,42 @@ const emit = defineEmits([
   "open-media",
   "query-change",
 ])
-const display = useDisplay();
-const isMobile = computed(() => display.xs.value);
-const keyword = ref("");
-const appliedKeyword = ref("");
-const selectedResourceTypes = ref([]);
-const selectedSources = ref([]);
-const selectedTaskTypes = ref([]);
-const selectedStatuses = ref([]);
-const expanded = ref([]);
-const selectedGroupKeys = ref([]);
-const selectedRecordKeys = ref([]);
-let groupSelectionFromRecord = false;
-const filtersVisible = ref(false);
-const searchVisible = ref(false);
-let lastQuerySignature = "";
+const display = useDisplay()
+const isMobile = computed(() => display.xs.value)
+const keyword = ref("")
+const appliedKeyword = ref("")
+const selectedResourceTypes = ref([])
+const selectedSources = ref([])
+const selectedTaskTypes = ref([])
+const selectedStatuses = ref([])
+const expanded = ref([])
+const selectedGroupKeys = ref([])
+const selectedRecordKeys = ref([])
+let groupSelectionFromRecord = false
+const filtersVisible = ref(false)
+const searchVisible = ref(false)
+let lastQuerySignature = ""
 
-const statusOptions = ["处理中", "下载中", "成功", "失败"];
+const statusOptions = ["处理中", "下载中", "成功", "失败"]
 const taskTypeOptions = [
-  {title: "跨盘", value: "cross_transfer"},
-  {title: "洗版", value: "upgrade"},
+  { title: "跨盘", value: "cross_transfer" },
+  { title: "洗版", value: "upgrade" },
 ]
 const pageSizes = [
-  {value: 10, title: "10"},
-  {value: 20, title: "20"},
-  {value: 50, title: "50"},
+  { value: 10, title: "10" },
+  { value: 20, title: "20" },
+  { value: 50, title: "50" },
 ]
 const headers = [
-  {title: "媒体名称", key: "media", sortable: false, width: "23%"},
-  {title: "目标网盘", key: "target_drives", sortable: false, width: "10%"},
-  {title: "资源类型", key: "resource_types", sortable: false, width: "8%"},
-  {title: "来源渠道", key: "sources", sortable: false, width: "10%"},
-  {title: "资源链接", key: "resource_links", sortable: false, width: "8%"},
-  {title: "汇总统计", key: "summary", sortable: false, width: "15%"},
-  {title: "完成时间", key: "latest_time", width: 172},
-  {title: "", key: "actions", sortable: false, width: 112},
-  {title: "", key: "data-table-expand", width: 44},
+  { title: "媒体名称", key: "media", sortable: false, width: "23%" },
+  { title: "目标网盘", key: "target_drives", sortable: false, width: "10%" },
+  { title: "资源类型", key: "resource_types", sortable: false, width: "8%" },
+  { title: "来源渠道", key: "sources", sortable: false, width: "10%" },
+  { title: "资源链接", key: "resource_links", sortable: false, width: "8%" },
+  { title: "汇总统计", key: "summary", sortable: false, width: "15%" },
+  { title: "完成时间", key: "latest_time", width: 172 },
+  { title: "", key: "actions", sortable: false, width: 112 },
+  { title: "", key: "data-table-expand", width: 44 },
 ]
 
 const resourceTypeOptions = computed(() =>
@@ -848,16 +850,16 @@ const resourceTypeOptions = computed(() =>
   })),
 )
 const sourceOptions = computed(() =>
-  uniqueOptions(props.filterOptions?.sources || []).map((value) => ({title: sourceLabel(value), value})),
+  uniqueOptions(props.filterOptions?.sources || []).map((value) => ({ title: sourceLabel(value), value })),
 )
 
 function notificationSummaryTitle(item) {
-  const title = String(item?.title || "未知媒体").trim();
-  const year = String(item?.year || "").trim();
-  return year ? title + "（" + year + "）" : title;
+  const title = String(item?.title || "未知媒体").trim()
+  const year = String(item?.year || "").trim()
+  return year ? title + "（" + year + "）" : title
 }
 
-const historyGroups = computed(() => (Array.isArray(props.items) ? props.items : []));
+const historyGroups = computed(() => (Array.isArray(props.items) ? props.items : []))
 const activeFilterCount = computed(
   () =>
     selectedResourceTypes.value.length +
@@ -866,26 +868,24 @@ const activeFilterCount = computed(
     selectedStatuses.value.length,
 )
 const selectedGroups = computed(() => {
-  const keys = new Set(selectedGroupKeys.value);
-  const recordKeys = new Set(selectedRecordKeys.value);
+  const keys = new Set(selectedGroupKeys.value)
+  const recordKeys = new Set(selectedRecordKeys.value)
   return historyGroups.value.filter(
     (group) =>
-      keys.has(group.group_key) ||
-      (group.records || []).some((record) => recordKeys.has(recordIdentifier(record))),
-  );
+      keys.has(group.group_key) || (group.records || []).some((record) => recordKeys.has(recordIdentifier(record))),
+  )
 })
-const deletableSelectedGroups = computed(() => selectedGroups.value.filter((group) => group.deletable));
-const groupedItemKeys = computed(() => new Set(historyGroups.value.map((group) => group.group_key)));
+const groupedItemKeys = computed(() => new Set(historyGroups.value.map((group) => group.group_key)))
 
 function historySeasonEpisodes(group) {
-  const episodes = {};
+  const episodes = {}
   for (const record of group?.records || []) {
-    const season = Number(record?.season || 0);
-    const episode = Number(record?.episode || 0);
-    if (season <= 0 || episode <= 0) continue;
-    const key = String(season);
-    if (!episodes[key]) episodes[key] = [];
-    episodes[key].push(episode);
+    const season = Number(record?.season || 0)
+    const episode = Number(record?.episode || 0)
+    if (season <= 0 || episode <= 0) continue
+    const key = String(season)
+    if (!episodes[key]) episodes[key] = []
+    episodes[key].push(episode)
   }
   return Object.fromEntries(
     Object.entries(episodes).map(([season, values]) => [season, uniqueOptions(values).sort((a, b) => a - b)]),
@@ -903,17 +903,17 @@ function emitQueryChange(overrides = {}) {
     statuses: [...selectedStatuses.value],
     ...overrides,
   }
-  const signature = JSON.stringify(query);
-  if (signature === lastQuerySignature) return;
-  lastQuerySignature = signature;
-  expanded.value = [];
-  selectedGroupKeys.value = [];
-  selectedRecordKeys.value = [];
-  emit("query-change", query);
+  const signature = JSON.stringify(query)
+  if (signature === lastQuerySignature) return
+  lastQuerySignature = signature
+  expanded.value = []
+  selectedGroupKeys.value = []
+  selectedRecordKeys.value = []
+  emit("query-change", query)
 }
 
 function changePage(value) {
-  emitQueryChange({page: Math.max(1, Number(value) || 1)});
+  emitQueryChange({ page: Math.max(1, Number(value) || 1) })
 }
 
 function changePageSize(value) {
@@ -924,21 +924,21 @@ function changePageSize(value) {
 }
 
 function submitSearch() {
-  const nextKeyword = String(keyword.value || "").trim();
-  appliedKeyword.value = nextKeyword;
-  searchVisible.value = false;
-  emitQueryChange({page: 1, keyword: nextKeyword});
+  const nextKeyword = String(keyword.value || "").trim()
+  appliedKeyword.value = nextKeyword
+  searchVisible.value = false
+  emitQueryChange({ page: 1, keyword: nextKeyword })
 }
 
 function clearSearch() {
-  keyword.value = "";
-  appliedKeyword.value = "";
-  emitQueryChange({page: 1, keyword: ""});
+  keyword.value = ""
+  appliedKeyword.value = ""
+  emitQueryChange({ page: 1, keyword: "" })
 }
 
 watch(
   [selectedResourceTypes, selectedSources, selectedTaskTypes, selectedStatuses],
-  () => emitQueryChange({page: 1}),
+  () => emitQueryChange({ page: 1 }),
   {
     deep: true,
   },
@@ -947,53 +947,52 @@ watch(
 watch(
   () => props.page,
   () => {
-    expanded.value = [];
-    selectedGroupKeys.value = [];
+    expanded.value = []
+    selectedGroupKeys.value = []
   },
 )
 
 watch(groupedItemKeys, (keys) => {
-  selectedGroupKeys.value = selectedGroupKeys.value.filter((key) => keys.has(key));
+  selectedGroupKeys.value = selectedGroupKeys.value.filter((key) => keys.has(key))
 })
 
 watch(selectedGroupKeys, (keys, previous) => {
-  const derived = groupSelectionFromRecord;
-  groupSelectionFromRecord = false;
-  const prev = new Set(previous || []);
-  const current = new Set(keys);
-  const recordKeys = new Set(selectedRecordKeys.value);
-  let changed = false;
+  const derived = groupSelectionFromRecord
+  groupSelectionFromRecord = false
+  const prev = new Set(previous || [])
+  const current = new Set(keys)
+  const recordKeys = new Set(selectedRecordKeys.value)
+  let changed = false
   for (const group of historyGroups.value) {
-    const groupKey = group.group_key;
-    const wasSelected = prev.has(groupKey);
-    const isSelected = current.has(groupKey);
-    if (wasSelected === isSelected) continue;
+    const groupKey = group.group_key
+    const wasSelected = prev.has(groupKey)
+    const isSelected = current.has(groupKey)
+    if (wasSelected === isSelected) continue
     for (const record of group.records || []) {
-      if (!canDeleteRecord(record)) continue;
-      const key = recordIdentifier(record);
-      if (!key) continue;
+      if (!canDeleteRecord(record)) continue
+      const key = recordIdentifier(record)
+      if (!key) continue
       if (isSelected) {
-        if (derived) continue;          // 记录派生的分组选中：不补齐同组其它记录
-        recordKeys.add(key);
+        if (derived) continue // 记录派生的分组选中：不补齐同组其它记录
+        recordKeys.add(key)
       } else {
-        recordKeys.delete(key);
+        recordKeys.delete(key)
       }
-      changed = true;
+      changed = true
     }
   }
-  if (changed) selectedRecordKeys.value = [...recordKeys];
-});
+  if (changed) selectedRecordKeys.value = [...recordKeys]
+})
 
 watch(
   selectedGroups,
   (groups) => {
-    const recordKeys = new Set(selectedRecordKeys.value);
+    const recordKeys = new Set(selectedRecordKeys.value)
     const recordCount = historyGroups.value.reduce(
       (count, group) =>
-        count +
-        (group.records || []).filter((record) => recordKeys.has(recordIdentifier(record))).length,
+        count + (group.records || []).filter((record) => recordKeys.has(recordIdentifier(record))).length,
       0,
-    );
+    )
     emit("selection-change", {
       groupCount: groups.length,
       recordCount,
@@ -1010,13 +1009,13 @@ watch(
         seasons: group.seasons || [],
         season_episodes: historySeasonEpisodes(group),
       })),
-    });
+    })
   },
-  {immediate: true},
-);
+  { immediate: true },
+)
 
 function uniqueOptions(values) {
-  return [...new Set(values.filter(Boolean))];
+  return [...new Set(values.filter(Boolean))]
 }
 
 function normalizeSource(value) {
@@ -1024,52 +1023,54 @@ function normalizeSource(value) {
     String(value || "unknown")
       .trim()
       .toLowerCase() || "unknown"
-  return ["manual", "手动添加", "手动资源"].includes(normalized) ? "manual" : normalized;
+  return ["manual", "手动添加", "手动资源"].includes(normalized) ? "manual" : normalized
 }
 
 function sourceLabel(value) {
-  return getSourceName(normalizeSource(value));
+  return getSourceName(normalizeSource(value))
 }
 
 function sourceColor(value) {
-  return getSourceColor(normalizeSource(value));
+  return getSourceColor(normalizeSource(value))
 }
 
 function sourceIcon(value) {
-  return getSourceIcon(normalizeSource(value));
+  return getSourceIcon(normalizeSource(value))
 }
 
 function formatColor(ext) {
-  const e = String(ext || "").trim().toUpperCase();
-  if (["ISO", "BDMV"].includes(e)) return "#e64a19";
-  if (["TS", "M2TS"].includes(e)) return "#0288d1";
-  if (["MP4", "MKV"].includes(e)) return "#546e7a";
-  return "#607d8b";
+  const e = String(ext || "")
+    .trim()
+    .toUpperCase()
+  if (["ISO", "BDMV"].includes(e)) return "#e64a19"
+  if (["TS", "M2TS"].includes(e)) return "#0288d1"
+  if (["MP4", "MKV"].includes(e)) return "#546e7a"
+  return "#607d8b"
 }
 
 function resourceType(item) {
-  if (typeof item === "string") return item.trim().toLowerCase();
+  if (typeof item === "string") return item.trim().toLowerCase()
   const configured = String(item?.resource_type || "")
     .trim()
     .toLowerCase()
-  return configured || "unknown";
+  return configured || "unknown"
 }
 
 function resourceTypeLabel(value) {
-  return getResourceTypeName(resourceType(value));
+  return getResourceTypeName(resourceType(value))
 }
 
 function resourceTypeColor(value) {
-  return getTypeColor(resourceType(value));
+  return getTypeColor(resourceType(value))
 }
 
 function driveColor(value) {
-  const name = Array.isArray(value) ? value[0] : value;
-  return getDriveColor(name);
+  const name = Array.isArray(value) ? value[0] : value
+  return getDriveColor(name)
 }
 
 function mediaDetailLink(item) {
-  if (!item?.tmdb_id) return "";
+  if (!item?.tmdb_id) return ""
   return [
     `#/media?mediaid=tmdb:${encodeURIComponent(String(item.tmdb_id))}`,
     `title=${encodeURIComponent(item.title || "")}`,
@@ -1079,52 +1080,52 @@ function mediaDetailLink(item) {
 }
 
 function openMediaDetail(item) {
-  const link = mediaDetailLink(item);
-  if (link) emit("open-media", link);
+  const link = mediaDetailLink(item)
+  if (link) emit("open-media", link)
 }
 
 function playItemId(item) {
-  return String(props.embyPlayItems?.[item?.group_key] || "");
+  return String(props.embyPlayItems?.[item?.group_key] || "")
 }
 
 function statusColor(status) {
-  return status === "成功" ? "success" : ["处理中", "下载中"].includes(status) ? "info" : "error";
+  return status === "成功" ? "success" : ["处理中", "下载中"].includes(status) ? "info" : "error"
 }
 
 function formatSize(bytes) {
-  let value = Number(bytes || 0);
-  if (!value) return "-";
+  let value = Number(bytes || 0)
+  if (!value) return "-"
   for (const unit of ["B", "KB", "MB", "GB", "TB"]) {
-    if (value < 1024 || unit === "TB") return `${value.toFixed(value >= 100 ? 0 : 1)} ${unit}`;
-    value /= 1024;
+    if (value < 1024 || unit === "TB") return `${value.toFixed(value >= 100 ? 0 : 1)} ${unit}`
+    value /= 1024
   }
-  return "-";
+  return "-"
 }
 
 function toggleExpanded(event, row) {
-  if (event?.target?.closest("a, button, input, .v-selection-control")) return;
-  const item = row?.item?.raw || row?.item || row;
-  const key = item?.group_key;
-  if (!key) return;
+  if (event?.target?.closest("a, button, input, .v-selection-control")) return
+  const item = row?.item?.raw || row?.item || row
+  const key = item?.group_key
+  if (!key) return
   expanded.value = expanded.value.includes(key)
     ? expanded.value.filter((value) => value !== key)
     : [...expanded.value, key]
 }
 
 function recordKey(record, index) {
-  return [record.time, record.file_name, record.season, record.episode, index].join(":");
+  return [record.time, record.file_name, record.season, record.episode, index].join(":")
 }
 
 function historyRetryKey(record) {
-  return [record.time, record.share_url, record.file_name].join("|");
+  return [record.time, record.share_url, record.file_name].join("|")
 }
 
 function historyUpgradeGroupKey(group) {
-  return `group:${group.group_key}`;
+  return `group:${group.group_key}`
 }
 
 function historyUpgradeRecordKey(record) {
-  return `record:${historyRetryKey(record)}`;
+  return `record:${historyRetryKey(record)}`
 }
 
 function canUpgradeRecord(record) {
@@ -1134,11 +1135,11 @@ function canUpgradeRecord(record) {
 }
 
 function canUpgradeGroup(group) {
-  return (group?.records || []).some((record) => record?.status === "成功" && !record?.finalize_key);
+  return (group?.records || []).some((record) => record?.status === "成功" && !record?.finalize_key)
 }
 
 function upgradeRecord(record) {
-  if (!canUpgradeRecord(record)) return;
+  if (!canUpgradeRecord(record)) return
   emit("upgrade", {
     scope: "record",
     records: [record],
@@ -1147,7 +1148,7 @@ function upgradeRecord(record) {
 }
 
 function upgradeGroup(group) {
-  if (!canUpgradeGroup(group)) return;
+  if (!canUpgradeGroup(group)) return
   emit("upgrade", {
     scope: "group",
     media: {
@@ -1163,168 +1164,165 @@ function upgradeGroup(group) {
 }
 
 function recordIdentifier(record) {
-  return String(record?.record_id || [record?.time, record?.share_url, record?.file_name].join("|")).trim();
+  return String(record?.record_id || [record?.time, record?.share_url, record?.file_name].join("|")).trim()
 }
 
 function isRecordSelected(record) {
-  const key = recordIdentifier(record);
-  return Boolean(key) && selectedRecordKeys.value.includes(key);
+  const key = recordIdentifier(record)
+  return Boolean(key) && selectedRecordKeys.value.includes(key)
 }
 
 function toggleRecordSelect(record, group, checked) {
-  if (!canDeleteRecord(record)) return;
-  const key = recordIdentifier(record);
-  if (!key) return;
-  const set = new Set(selectedRecordKeys.value);
-  if (checked) set.add(key);
-  else set.delete(key);
-  selectedRecordKeys.value = [...set];
-  syncGroupSelection(group, set);
+  if (!canDeleteRecord(record)) return
+  const key = recordIdentifier(record)
+  if (!key) return
+  const set = new Set(selectedRecordKeys.value)
+  if (checked) set.add(key)
+  else set.delete(key)
+  selectedRecordKeys.value = [...set]
+  syncGroupSelection(group, set)
 }
 
 function syncGroupSelection(group, recordKeys) {
   // 记录级勾选必须同步分组选择态，否则「搜索所选」永远拿不到数量；内容不变则不写回
-  const groupKey = group?.group_key;
-  if (!groupKey) return;
-  const current = selectedGroupKeys.value;
+  const groupKey = group?.group_key
+  if (!groupKey) return
+  const current = selectedGroupKeys.value
   const shouldSelect = (group.records || []).some((record) => {
-    const key = recordIdentifier(record);
-    return key && recordKeys.has(key);
-  });
-  if (shouldSelect === current.includes(groupKey)) return;
+    const key = recordIdentifier(record)
+    return key && recordKeys.has(key)
+  })
+  if (shouldSelect === current.includes(groupKey)) return
   if (shouldSelect) {
-    groupSelectionFromRecord = true;
+    groupSelectionFromRecord = true
   }
-  selectedGroupKeys.value = shouldSelect
-    ? [...current, groupKey]
-    : current.filter((key) => key !== groupKey);
+  selectedGroupKeys.value = shouldSelect ? [...current, groupKey] : current.filter((key) => key !== groupKey)
 }
 
 function isGroupAllRecordsSelected(group) {
-  const records = (group?.records || []).filter(canDeleteRecord);
-  if (!records.length) return false;
-  return records.every((r) => isRecordSelected(r));
+  const records = (group?.records || []).filter(canDeleteRecord)
+  if (!records.length) return false
+  return records.every((r) => isRecordSelected(r))
 }
 
 function isGroupRecordsIndeterminate(group) {
-  const records = (group?.records || []).filter(canDeleteRecord);
-  if (!records.length) return false;
-  const count = records.filter((r) => isRecordSelected(r)).length;
-  return count > 0 && count < records.length;
+  const records = (group?.records || []).filter(canDeleteRecord)
+  if (!records.length) return false
+  const count = records.filter((r) => isRecordSelected(r)).length
+  return count > 0 && count < records.length
 }
 
 function toggleGroupRecordsSelectAll(group, checked) {
-  const records = (group?.records || []).filter(canDeleteRecord);
-  if (!records.length) return;
-  const set = new Set(selectedRecordKeys.value);
+  const records = (group?.records || []).filter(canDeleteRecord)
+  if (!records.length) return
+  const set = new Set(selectedRecordKeys.value)
   for (const r of records) {
-    const key = recordIdentifier(r);
-    if (checked) set.add(key);
-    else set.delete(key);
+    const key = recordIdentifier(r)
+    if (checked) set.add(key)
+    else set.delete(key)
   }
-  selectedRecordKeys.value = [...set];
-  syncGroupSelection(group, set);
+  selectedRecordKeys.value = [...set]
+  syncGroupSelection(group, set)
 }
 
 const effectiveSelectedRecords = computed(() => {
   // 以记录键为唯一口径：分组勾选会补齐记录键，部分取消也能被准确反映
-  const selectedKeySet = new Set(selectedRecordKeys.value);
-  const recordsMap = new Map();
+  const selectedKeySet = new Set(selectedRecordKeys.value)
+  const recordsMap = new Map()
   for (const group of historyGroups.value) {
     for (const record of group.records || []) {
-      const key = recordIdentifier(record);
+      const key = recordIdentifier(record)
       if (key && canDeleteRecord(record) && selectedKeySet.has(key)) {
-        recordsMap.set(key, record);
+        recordsMap.set(key, record)
       }
     }
   }
-  return [...recordsMap.values()];
-});
+  return [...recordsMap.values()]
+})
 
-const totalSelectedCount = computed(() => effectiveSelectedRecords.value.length);
+const totalSelectedCount = computed(() => effectiveSelectedRecords.value.length)
 
 const hasDeletableGroups = computed(() =>
   historyGroups.value.some((group) => group.deletable && (group?.records || []).some(canDeleteRecord)),
-);
+)
 
 const isPageAllSelected = computed(() => {
-  const groups = historyGroups.value.filter((g) => g.deletable && (g?.records || []).some(canDeleteRecord));
-  if (!groups.length) return false;
-  return groups.every((g) => isGroupAllRecordsSelected(g));
-});
+  const groups = historyGroups.value.filter((g) => g.deletable && (g?.records || []).some(canDeleteRecord))
+  if (!groups.length) return false
+  return groups.every((g) => isGroupAllRecordsSelected(g))
+})
 
 const isPageIndeterminate = computed(() => {
-  if (isPageAllSelected.value) return false;
-  return effectiveSelectedRecords.value.length > 0;
-});
+  if (isPageAllSelected.value) return false
+  return effectiveSelectedRecords.value.length > 0
+})
 
 function togglePageSelectAll(checked) {
-  const set = new Set(selectedRecordKeys.value);
-  const groupKeys = new Set(selectedGroupKeys.value);
+  const set = new Set(selectedRecordKeys.value)
+  const groupKeys = new Set(selectedGroupKeys.value)
   for (const group of historyGroups.value) {
-    if (!group.deletable) continue;
-    const records = (group?.records || []).filter(canDeleteRecord);
-    if (!records.length) continue;
+    if (!group.deletable) continue
+    const records = (group?.records || []).filter(canDeleteRecord)
+    if (!records.length) continue
     if (checked) {
-      groupKeys.add(group.group_key);
+      groupKeys.add(group.group_key)
       for (const r of records) {
-        set.add(recordIdentifier(r));
+        set.add(recordIdentifier(r))
       }
     } else {
-      groupKeys.delete(group.group_key);
+      groupKeys.delete(group.group_key)
       for (const r of records) {
-        set.delete(recordIdentifier(r));
+        set.delete(recordIdentifier(r))
       }
     }
   }
-  selectedGroupKeys.value = [...groupKeys];
-  selectedRecordKeys.value = [...set];
+  selectedGroupKeys.value = [...groupKeys]
+  selectedRecordKeys.value = [...set]
 }
 
 function isGroupSelected(group) {
-  return selectedGroupKeys.value.includes(group.group_key);
+  return selectedGroupKeys.value.includes(group.group_key)
 }
 
 function selectGroup(group, selected) {
-  if (!group.selectable) return;
-  const keys = new Set(selectedGroupKeys.value);
-  if (selected) keys.add(group.group_key);
-  else keys.delete(group.group_key);
-  selectedGroupKeys.value = [...keys];
+  if (!group.selectable) return
+  const keys = new Set(selectedGroupKeys.value)
+  if (selected) keys.add(group.group_key)
+  else keys.delete(group.group_key)
+  selectedGroupKeys.value = [...keys]
 }
 
 function deleteSelected() {
-  if (!effectiveSelectedRecords.value.length) return;
+  if (!effectiveSelectedRecords.value.length) return
   emit("delete-groups", {
     groupCount: selectedGroups.value.length || 1,
     records: effectiveSelectedRecords.value,
-  });
+  })
 }
 
 function clearFilters() {
-  selectedResourceTypes.value = [];
-  selectedSources.value = [];
-  selectedTaskTypes.value = [];
-  selectedStatuses.value = [];
+  selectedResourceTypes.value = []
+  selectedSources.value = []
+  selectedTaskTypes.value = []
+  selectedStatuses.value = []
 }
 
 function canRetryRecord(record) {
-  return Boolean(record?.can_retry);
+  return Boolean(record?.can_retry)
 }
 
 function retryTitle(record) {
-  return record?.retry_title || "当前记录无需重试";
+  return record?.retry_title || "当前记录无需重试"
 }
 
 function canDeleteRecord(record) {
-  return ["成功", "失败"].includes(record?.status) || Boolean(record?.finalize_key);
+  return ["成功", "失败"].includes(record?.status) || Boolean(record?.finalize_key)
 }
 
 function deleteTitle(record) {
-  if (!canDeleteRecord(record)) return "当前记录不能删除";
-  return record?.finalize_key ? "删除此条后处理记录" : "删除此条历史记录";
+  if (!canDeleteRecord(record)) return "当前记录不能删除"
+  return record?.finalize_key ? "删除此条后处理记录" : "删除此条历史记录"
 }
-
 </script>
 
 <style scoped>
@@ -1807,7 +1805,7 @@ function deleteTitle(record) {
 .history-mobile-tags,
 .history-mobile-record-head {
   display: flex;
-  align-items: center;          /* 复选框 / 文字块 / 操作按钮 中线对齐 */
+  align-items: center; /* 复选框 / 文字块 / 操作按钮 中线对齐 */
   min-width: 0;
   gap: 2px;
 }
@@ -1826,7 +1824,7 @@ function deleteTitle(record) {
 
 .history-mobile-check {
   flex: 0 0 auto;
-  margin-top: 0;                /* 居中后不再需要上移补偿 */
+  margin-top: 0; /* 居中后不再需要上移补偿 */
 }
 
 .history-mobile-record .history-mobile-file {

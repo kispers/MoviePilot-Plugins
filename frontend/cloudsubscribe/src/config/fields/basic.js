@@ -8,7 +8,7 @@ export function createBasicSection(cloudDriveItems, options = {}) {
         title: "运行设置",
         icon: "mdi-play-circle-outline",
         fields: [
-          {key: "enabled", label: "启用插件", type: "switch", cols: 4},
+          { key: "enabled", label: "启用插件", type: "switch", cols: 4 },
           {
             key: "show_sidebar_nav",
             label: "启用左侧导航",
@@ -69,9 +69,9 @@ export function createBasicSection(cloudDriveItems, options = {}) {
             label: "平台下载策略",
             type: "select",
             items: [
-              {title: "允许下载并整理", value: "allow"},
-              {title: "阻止搜索及下载", value: "block"},
-              {title: "转为网盘离线下载", value: "cloud"},
+              { title: "允许下载并整理", value: "allow" },
+              { title: "阻止搜索及下载", value: "block" },
+              { title: "转为网盘离线下载", value: "cloud" },
             ],
             hint: "接管期内 PT/RSS 下载行为",
             cols: 8,

@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-defineProps({stats: {type: Array, default: () => []}});
+defineProps({ stats: { type: Array, default: () => [] } })
 </script>
 
 <style scoped>

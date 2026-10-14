@@ -1,12 +1,12 @@
-import {ref} from "vue";
+import { ref } from "vue"
 
-const snackbarVisible = ref(false);
-const snackbarText = ref("");
-const snackbarColor = ref("success");
+const snackbarVisible = ref(false)
+const snackbarText = ref("")
+const snackbarColor = ref("success")
 
 export function isCancellationMessage(msg) {
-  if (!msg) return false;
-  const text = String(msg?.message || msg || "").toLowerCase();
+  if (!msg) return false
+  const text = String(msg?.message || msg || "").toLowerCase()
   return (
     text.includes("cancel") ||
     text.includes("abort") ||
@@ -17,22 +17,22 @@ export function isCancellationMessage(msg) {
     text.includes("user aborted") ||
     text.includes("请求已取消") ||
     text.includes("操作已取消")
-  );
+  )
 }
 
 export function useSnackbar() {
   function showMessage(msg, color = "success") {
     if (color !== "success" && isCancellationMessage(msg)) {
-      return;
+      return
     }
-    snackbarText.value = typeof msg === "object" && msg?.message ? msg.message : String(msg || "");
-    snackbarColor.value = color;
-    snackbarVisible.value = true;
+    snackbarText.value = typeof msg === "object" && msg?.message ? msg.message : String(msg || "")
+    snackbarColor.value = color
+    snackbarVisible.value = true
   }
   return {
     snackbarVisible,
     snackbarText,
     snackbarColor,
     showMessage,
-  };
+  }
 }

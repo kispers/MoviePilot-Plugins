@@ -27,12 +27,7 @@
               {{ task.task_kind === "pt_upgrade" ? "PT 洗版" : "网盘洗版" }}
             </v-chip>
             <v-chip :color="taskStatusColor(task)" size="x-small" variant="tonal" class="task-status-chip">
-              <v-progress-circular
-                v-if="task.search_active"
-                indeterminate
-                size="10"
-                width="2"
-                class="mr-1" />
+              <v-progress-circular v-if="task.search_active" indeterminate size="10" width="2" class="mr-1" />
               <span class="task-status-label">{{ taskStatusBaseText(task) }}</span>
             </v-chip>
           </div>
@@ -107,7 +102,7 @@
                     class="task-channel-badge"
                     :class="[
                       `task-channel-badge--${ch.status}`,
-                      { 'task-channel-badge--empty': ch.status === 'success' && ch.count === 0 }
+                      { 'task-channel-badge--empty': ch.status === 'success' && ch.count === 0 },
                     ]"
                     :title="channelTooltip(task, ch)">
                     <v-progress-circular
@@ -134,9 +129,7 @@
                     <span v-else-if="ch.status === 'circuit_break'" class="task-channel-tag task-channel-tag--warn">
                       熔断
                     </span>
-                    <span v-else-if="ch.status === 'failed'" class="task-channel-tag task-channel-tag--err">
-                      失败
-                    </span>
+                    <span v-else-if="ch.status === 'failed'" class="task-channel-tag task-channel-tag--err">失败</span>
                     <span v-else-if="ch.status === 'pending'" class="task-channel-tag task-channel-tag--pending">
                       等待
                     </span>
@@ -200,68 +193,69 @@
   </div>
 </template>
 <script setup>
-import {computed, onMounted, onUnmounted, ref} from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue"
 
 const props = defineProps({
-  runtime: {type: Object, required: true},
+  runtime: { type: Object, required: true },
   active: Boolean,
 })
-const emit = defineEmits(["stop-task"]);
-const active = computed(() => props.active);
-const expandedTaskIds = ref(new Set());
+const emit = defineEmits(["stop-task"])
+const active = computed(() => props.active)
+const expandedTaskIds = ref(new Set())
 const tasks = computed(() =>
   (props.runtime.tasks || []).filter(
     (task) =>
-      task.task_kind === "cross_transfer" || ["queued", "running", "stopping", "downloading", "transferring", "postprocessing"].includes(task.status),
+      task.task_kind === "cross_transfer" ||
+      ["queued", "running", "stopping", "downloading", "transferring", "postprocessing"].includes(task.status),
   ),
 )
 
-const now = ref(Date.now());
-let timer = null;
+const now = ref(Date.now())
+let timer = null
 
 onMounted(() => {
   timer = setInterval(() => {
     if (tasks.value.some((t) => t.search_active || t.status === "running")) {
-      now.value = Date.now();
+      now.value = Date.now()
     }
-  }, 200);
-});
+  }, 200)
+})
 
 onUnmounted(() => {
   if (timer) {
-    clearInterval(timer);
-    timer = null;
+    clearInterval(timer)
+    timer = null
   }
-});
+})
 
 function postprocessingSummary(task) {
   // 已有后处理步骤时以实际步骤为准（转存完成后的刮削/登记仍在进行）
   if (task?.postprocess_active) {
-    return currentPostprocessStep(task)?.label || "正在处理文件";
+    return currentPostprocessStep(task)?.label || "正在处理文件"
   }
   if (task?.postprocess_step && task?.status !== "downloading") {
-    return currentPostprocessStep(task)?.label || "正在处理文件";
+    return currentPostprocessStep(task)?.label || "正在处理文件"
   }
   if (task?.status === "downloading") {
-    const pendingCount = Number(task?.download_pending_count || 0);
-    return pendingCount > 0 ? `等待离线下载 ${pendingCount} 个文件` : "等待离线下载";
+    const pendingCount = Number(task?.download_pending_count || 0)
+    return pendingCount > 0 ? `等待离线下载 ${pendingCount} 个文件` : "等待离线下载"
   }
   if (task?.status === "transferring") {
-    const pendingCount = Number(task?.transfer_pending_count || 0);
-    return pendingCount > 0 ? `等待网盘转存 ${pendingCount} 个文件` : "等待网盘转存";
+    const pendingCount = Number(task?.transfer_pending_count || 0)
+    return pendingCount > 0 ? `等待网盘转存 ${pendingCount} 个文件` : "等待网盘转存"
   }
   if (task?.download_pending_count > 0) {
-    return `等待离线下载 ${task.download_pending_count} 个文件`;
+    return `等待离线下载 ${task.download_pending_count} 个文件`
   }
   if (task?.transfer_pending_count > 0) {
-    return `等待网盘转存 ${task.transfer_pending_count} 个文件`;
+    return `等待网盘转存 ${task.transfer_pending_count} 个文件`
   }
-  const pendingCount = Number(task?.pending_count || 0);
-  return pendingCount > 0 ? `${pendingCount} 个文件待完成后处理` : "正在完成文件后处理";
+  const pendingCount = Number(task?.pending_count || 0)
+  return pendingCount > 0 ? `${pendingCount} 个文件待完成后处理` : "正在完成文件后处理"
 }
 
 function isTransferringOrPostprocessing(task) {
-  if (!task) return false;
+  if (!task) return false
   return Boolean(
     task.postprocess_active ||
     task.transfer_active ||
@@ -269,63 +263,63 @@ function isTransferringOrPostprocessing(task) {
     Number(task.postprocess_file_total || 0) > 0 ||
     ["downloading", "transferring", "postprocessing"].includes(task.status) ||
     /转存|下载|后处理|整理/.test(String(task.phase || "")),
-  );
+  )
 }
 
 function hasTaskDetails(task) {
-  return hasPostprocessDetails(task) || hasSearchDetails(task);
+  return hasPostprocessDetails(task) || hasSearchDetails(task)
 }
 
 function hasSearchDetails(task) {
   // 进入转存或后处理阶段后，自动隐藏搜索渠道信息，聚焦转存与处理进度
   if (isTransferringOrPostprocessing(task)) {
-    return false;
+    return false
   }
-  return Array.isArray(task?.search_channels) && task.search_channels.length > 0;
+  return Array.isArray(task?.search_channels) && task.search_channels.length > 0
 }
 
 function channelIcon(ch) {
-  if (!ch) return "mdi-circle-outline";
+  if (!ch) return "mdi-circle-outline"
   if (ch.status === "success") {
-    return ch.count > 0 ? "mdi-check-circle" : "mdi-minus-circle-outline";
+    return ch.count > 0 ? "mdi-check-circle" : "mdi-minus-circle-outline"
   }
   if (ch.status === "searching") {
-    return "mdi-magnify";
+    return "mdi-magnify"
   }
   if (ch.status === "timeout") {
-    return "mdi-clock-alert-outline";
+    return "mdi-clock-alert-outline"
   }
   if (ch.status === "circuit_break") {
-    return "mdi-flash-off";
+    return "mdi-flash-off"
   }
   if (ch.status === "failed") {
-    return "mdi-alert-circle-outline";
+    return "mdi-alert-circle-outline"
   }
-  return "mdi-clock-outline";
+  return "mdi-clock-outline"
 }
 
 function channelTooltip(task, ch) {
-  if (!ch) return "";
-  const name = ch.name || ch.key;
-  const elapsedStr = channelDisplayElapsed(task, ch);
-  const elapsedPart = elapsedStr ? ` · 耗时 ${elapsedStr}` : "";
+  if (!ch) return ""
+  const name = ch.name || ch.key
+  const elapsedStr = channelDisplayElapsed(task, ch)
+  const elapsedPart = elapsedStr ? ` · 耗时 ${elapsedStr}` : ""
   if (ch.status === "success") {
-    return `${name}：成功返回 ${ch.count} 条候选数据${elapsedPart}`;
+    return `${name}：成功返回 ${ch.count} 条候选数据${elapsedPart}`
   }
   if (ch.status === "searching") {
-    const liveElapsed = elapsedStr ? ` (已耗时 ${elapsedStr})` : "";
-    return `${name}：正在并发查询中${liveElapsed}...`;
+    const liveElapsed = elapsedStr ? ` (已耗时 ${elapsedStr})` : ""
+    return `${name}：正在并发查询中${liveElapsed}...`
   }
   if (ch.status === "timeout") {
-    return `${name}：搜索请求超时已跳过${elapsedPart}`;
+    return `${name}：搜索请求超时已跳过${elapsedPart}`
   }
   if (ch.status === "circuit_break") {
-    return `${name}：${ch.error || "多次失败熔断保护中"}`;
+    return `${name}：${ch.error || "多次失败熔断保护中"}`
   }
   if (ch.status === "failed") {
-    return `${name}：搜索失败 (${ch.error || "未知异常"})${elapsedPart}`;
+    return `${name}：搜索失败 (${ch.error || "未知异常"})${elapsedPart}`
   }
-  return `${name}：等待检索`;
+  return `${name}：等待检索`
 }
 
 function hasPostprocessDetails(task) {
@@ -338,118 +332,118 @@ function hasPostprocessDetails(task) {
 }
 
 function postprocessSteps(task) {
-  return Array.isArray(task?.postprocess_steps) ? task.postprocess_steps.filter((step) => step?.key && step?.label) : [];
+  return Array.isArray(task?.postprocess_steps) ? task.postprocess_steps.filter((step) => step?.key && step?.label) : []
 }
 
 function currentPostprocessStep(task) {
-  const steps = postprocessSteps(task);
-  const currentKey = String(task?.postprocess_step || "");
-  return steps.find((step) => step.key === currentKey) || null;
+  const steps = postprocessSteps(task)
+  const currentKey = String(task?.postprocess_step || "")
+  return steps.find((step) => step.key === currentKey) || null
 }
 
 function postprocessStepState(task, index) {
-  const currentIndex = Math.max(0, Number(task?.postprocess_step_index || 0));
-  if (index < currentIndex) return "completed";
-  if (index === currentIndex) return "active";
-  return "pending";
+  const currentIndex = Math.max(0, Number(task?.postprocess_step_index || 0))
+  if (index < currentIndex) return "completed"
+  if (index === currentIndex) return "active"
+  return "pending"
 }
 
 function postprocessStepIcon(task, index) {
-  const state = postprocessStepState(task, index);
-  if (state === "completed") return "mdi-check-circle";
-  if (state === "active") return "mdi-progress-clock";
-  return "mdi-circle-outline";
+  const state = postprocessStepState(task, index)
+  if (state === "completed") return "mdi-check-circle"
+  if (state === "active") return "mdi-progress-clock"
+  return "mdi-circle-outline"
 }
 
 function isTaskExpanded(taskId) {
-  return expandedTaskIds.value.has(taskId);
+  return expandedTaskIds.value.has(taskId)
 }
 
 function toggleTaskDetails(taskId) {
-  const nextIds = new Set(expandedTaskIds.value);
+  const nextIds = new Set(expandedTaskIds.value)
   if (nextIds.has(taskId)) {
-    nextIds.delete(taskId);
+    nextIds.delete(taskId)
   } else {
-    nextIds.add(taskId);
+    nextIds.add(taskId)
   }
-  expandedTaskIds.value = nextIds;
+  expandedTaskIds.value = nextIds
 }
 
 function canStop(task) {
-  return ["queued", "running", "stopping", "downloading", "transferring", "postprocessing"].includes(task?.status);
+  return ["queued", "running", "stopping", "downloading", "transferring", "postprocessing"].includes(task?.status)
 }
 
 function formatDuration(seconds) {
-  const sec = Math.max(0, Number(seconds || 0));
-  if (sec <= 0) return "";
+  const sec = Math.max(0, Number(seconds || 0))
+  if (sec <= 0) return ""
   if (sec < 60) {
-    return `${sec < 10 ? sec.toFixed(1) : Math.round(sec)}s`;
+    return `${sec < 10 ? sec.toFixed(1) : Math.round(sec)}s`
   }
-  const mins = Math.floor(sec / 60);
-  const remainSec = Math.round(sec % 60);
+  const mins = Math.floor(sec / 60)
+  const remainSec = Math.round(sec % 60)
   if (mins < 60) {
-    return `${mins}m ${remainSec}s`;
+    return `${mins}m ${remainSec}s`
   }
-  const hours = Math.floor(mins / 60);
-  const remainMins = mins % 60;
-  return `${hours}h ${remainMins}m`;
+  const hours = Math.floor(mins / 60)
+  const remainMins = mins % 60
+  return `${hours}h ${remainMins}m`
 }
 
 function formatChannelElapsed(ms) {
-  const m = Number(ms || 0);
-  if (m <= 0) return "";
-  const sec = m / 1000;
-  if (sec < 0.1) return "<0.1s";
-  return `${sec < 10 ? sec.toFixed(1) : Math.round(sec)}s`;
+  const m = Number(ms || 0)
+  if (m <= 0) return ""
+  const sec = m / 1000
+  if (sec < 0.1) return "<0.1s"
+  return `${sec < 10 ? sec.toFixed(1) : Math.round(sec)}s`
 }
 
-const localChannelStartTimes = new Map();
+const localChannelStartTimes = new Map()
 
 function getChannelElapsedMs(task, ch) {
-  if (!ch) return 0;
+  if (!ch) return 0
   if (ch.status === "searching") {
-    const key = `${task?.id || ""}:${ch.key || ch.name}`;
+    const key = `${task?.id || ""}:${ch.key || ch.name}`
     if (ch.started_at && Number(ch.started_at) > 0) {
-      const startMs = Number(ch.started_at) * 1000;
-      return Math.max(0, now.value - startMs);
+      const startMs = Number(ch.started_at) * 1000
+      return Math.max(0, now.value - startMs)
     }
     if (!localChannelStartTimes.has(key)) {
-      const initialElapsed = Number(ch.elapsed_ms || 0);
-      localChannelStartTimes.set(key, now.value - initialElapsed);
+      const initialElapsed = Number(ch.elapsed_ms || 0)
+      localChannelStartTimes.set(key, now.value - initialElapsed)
     }
-    const startMs = localChannelStartTimes.get(key);
-    return Math.max(0, now.value - startMs);
+    const startMs = localChannelStartTimes.get(key)
+    return Math.max(0, now.value - startMs)
   }
-  return Number(ch.elapsed_ms || 0);
+  return Number(ch.elapsed_ms || 0)
 }
 
 function channelDisplayElapsed(task, ch) {
-  const ms = getChannelElapsedMs(task, ch);
-  return formatChannelElapsed(ms);
+  const ms = getChannelElapsedMs(task, ch)
+  return formatChannelElapsed(ms)
 }
 
 function taskElapsedText(task) {
-  if (!task) return "";
-  if (task.status === "queued" || task.phase === "等待调度") return "";
-  const sec = Number(task.elapsed_seconds || 0);
+  if (!task) return ""
+  if (task.status === "queued" || task.phase === "等待调度") return ""
+  const sec = Number(task.elapsed_seconds || 0)
   if (sec > 0) {
-    return formatDuration(sec);
+    return formatDuration(sec)
   }
-  return "";
+  return ""
 }
 
 function taskStatusBaseText(task) {
-  if (!task) return "未知";
+  if (!task) return "未知"
   if (task.search_active) {
-    return "搜索中";
+    return "搜索中"
   }
-  const status = task.status;
+  const status = task.status
   if (status === "running") {
-    const phase = String(task.phase || "");
+    const phase = String(task.phase || "")
     if (phase.includes("校验候选") || phase.includes("检查候选")) {
-      return "校验中";
+      return "校验中"
     }
-    return "运行中";
+    return "运行中"
   }
   return (
     {
@@ -465,39 +459,39 @@ function taskStatusBaseText(task) {
       stopped: "已停止",
       canceled: "已取消",
     }[status] || "未知"
-  );
+  )
 }
 
 function taskStatusElapsed(task) {
-  if (!task) return "";
+  if (!task) return ""
   if (task.search_active) {
-    return taskElapsedText(task);
+    return taskElapsedText(task)
   }
   if (task.status === "running") {
-    const phase = String(task.phase || "");
+    const phase = String(task.phase || "")
     if (phase.includes("校验候选") || phase.includes("检查候选")) {
-      return taskElapsedText(task);
+      return taskElapsedText(task)
     }
   }
-  return "";
+  return ""
 }
 
 function taskStatusText(task) {
-  const base = taskStatusBaseText(task);
-  const elapsed = taskStatusElapsed(task);
-  return elapsed ? `${base} (${elapsed})` : base;
+  const base = taskStatusBaseText(task)
+  const elapsed = taskStatusElapsed(task)
+  return elapsed ? `${base} (${elapsed})` : base
 }
 
 function taskStatusColor(task) {
-  if (!task) return "secondary";
-  if (task.search_active) return "info";
-  const status = task.status;
+  if (!task) return "secondary"
+  if (task.search_active) return "info"
+  const status = task.status
   if (status === "running") {
-    const phase = String(task.phase || "");
+    const phase = String(task.phase || "")
     if (phase.includes("校验候选") || phase.includes("检查候选")) {
-      return "primary";
+      return "primary"
     }
-    return "info";
+    return "info"
   }
   return (
     {
@@ -513,7 +507,7 @@ function taskStatusColor(task) {
       stopped: "warning",
       canceled: "warning",
     }[status] || "secondary"
-  );
+  )
 }
 
 function taskStatus(status) {
@@ -531,7 +525,7 @@ function taskStatus(status) {
       stopped: "已停止",
       canceled: "已取消",
     }[status] || "未知"
-  );
+  )
 }
 
 function taskColor(status) {
@@ -553,57 +547,54 @@ function taskColor(status) {
 }
 
 const progressColors = [
-  {progress: 0, color: [66, 165, 245]},
-  {progress: 35, color: [38, 198, 218]},
-  {progress: 65, color: [255, 179, 0]},
-  {progress: 85, color: [102, 187, 106]},
-  {progress: 100, color: [46, 125, 50]},
+  { progress: 0, color: [66, 165, 245] },
+  { progress: 35, color: [38, 198, 218] },
+  { progress: 65, color: [255, 179, 0] },
+  { progress: 85, color: [102, 187, 106] },
+  { progress: 100, color: [46, 125, 50] },
 ]
 
 function progressColor(progress) {
-  const value = Math.max(0, Math.min(100, Number(progress || 0)));
-  const upperIndex = progressColors.findIndex((item) => value <= item.progress);
-  if (upperIndex <= 0) return `rgb(${progressColors[0].color.join(", ")})`;
-  const lower = progressColors[upperIndex - 1];
-  const upper = progressColors[upperIndex];
-  const ratio = (value - lower.progress) / (upper.progress - lower.progress);
-  const color = lower.color.map((channel, index) => Math.round(channel + (upper.color[index] - channel) * ratio));
-  return `rgb(${color.join(", ")})`;
+  const value = Math.max(0, Math.min(100, Number(progress || 0)))
+  const upperIndex = progressColors.findIndex((item) => value <= item.progress)
+  if (upperIndex <= 0) return `rgb(${progressColors[0].color.join(", ")})`
+  const lower = progressColors[upperIndex - 1]
+  const upper = progressColors[upperIndex]
+  const ratio = (value - lower.progress) / (upper.progress - lower.progress)
+  const color = lower.color.map((channel, index) => Math.round(channel + (upper.color[index] - channel) * ratio))
+  return `rgb(${color.join(", ")})`
 }
 
 function progressStyle(task) {
   if (["failed"].includes(task?.status)) {
-    return {"--task-progress-gradient": "linear-gradient(90deg, #ff8a80, #d32f2f)"};
+    return { "--task-progress-gradient": "linear-gradient(90deg, #ff8a80, #d32f2f)" }
   }
   if (["stopping", "stopped", "canceled"].includes(task?.status)) {
-    return {"--task-progress-gradient": "linear-gradient(90deg, #ffd54f, #fb8c00)"};
+    return { "--task-progress-gradient": "linear-gradient(90deg, #ffd54f, #fb8c00)" }
   }
-  const progress = taskProgress(task);
+  const progress = taskProgress(task)
   return {
     "--task-progress-gradient": `linear-gradient(90deg, ${progressColor(progress)}, ${progressColor(Math.min(100, progress + 18))})`,
   }
 }
 
 function shouldShowProgress(task) {
-  if (!task) return false;
+  if (!task) return false
   // 等待调度或排队中不显示进度条和动画，解决大量排队任务时的严重卡顿
   if (task.status === "queued" || task.phase === "等待调度") {
-    return false;
+    return false
   }
-  return true;
+  return true
 }
 
 function hasDeterminateProgress(task) {
-  if (!task) return false;
+  if (!task) return false
   if (task.status === "queued" || task.phase === "等待调度") {
-    return false;
+    return false
   }
   // 1. 跨盘或 PT 传输有字节数
-  if (
-    (task.transfer_active || ["pt_upgrade", "cross_transfer"].includes(task.task_kind)) &&
-    displayTotal(task) > 0
-  ) {
-    return true;
+  if ((task.transfer_active || ["pt_upgrade", "cross_transfer"].includes(task.task_kind)) && displayTotal(task) > 0) {
+    return true
   }
   // 2. 转存中、下载中或后处理中：只要有步骤活跃、或有文件进度、或有非零百分比
   if (["downloading", "transferring", "postprocessing"].includes(task.status)) {
@@ -611,61 +602,58 @@ function hasDeterminateProgress(task) {
       task.postprocess_active ||
       Number(task.postprocess_progress || 0) > 0 ||
       Number(task.postprocess_file_total || 0) > 0,
-    );
+    )
   }
   // 3. 运行中且具备阶段进度
   if (["running"].includes(task.status) && Number(task.progress || 0) > 0) {
-    return true;
+    return true
   }
-  return false;
+  return false
 }
 
 function isProgressIndeterminate(task) {
-  if (!task) return false;
+  if (!task) return false
   // 等待调度和排队状态绝不运行动画
   if (task.status === "queued" || task.phase === "等待调度") {
-    return false;
+    return false
   }
   if (["completed", "success", "failed", "stopped", "canceled"].includes(task.status)) {
-    return false;
+    return false
   }
   if (hasDeterminateProgress(task)) {
-    return false;
+    return false
   }
-  return true;
+  return true
 }
 
 function taskProgress(task) {
-  if (!task) return 0;
-  if (
-    (task.transfer_active || ["pt_upgrade", "cross_transfer"].includes(task.task_kind)) &&
-    displayTotal(task) > 0
-  ) {
-    const total = displayTotal(task);
-    const transferred = displayTransferred(task);
-    return Math.max(0, Math.min(100, (transferred / total) * 100));
+  if (!task) return 0
+  if ((task.transfer_active || ["pt_upgrade", "cross_transfer"].includes(task.task_kind)) && displayTotal(task) > 0) {
+    const total = displayTotal(task)
+    const transferred = displayTransferred(task)
+    return Math.max(0, Math.min(100, (transferred / total) * 100))
   }
   if (["downloading", "transferring", "postprocessing"].includes(task.status)) {
-    const postProgress = Number(task.postprocess_progress || 0);
+    const postProgress = Number(task.postprocess_progress || 0)
     if (postProgress > 0) {
-      return Math.max(0, Math.min(100, postProgress));
+      return Math.max(0, Math.min(100, postProgress))
     }
-    const total = Number(task.postprocess_file_total || 0);
+    const total = Number(task.postprocess_file_total || 0)
     if (total > 0) {
-      const completed = Number(task.postprocess_file_completed || 0);
-      return Math.max(0, Math.min(100, Math.round((completed / total) * 100)));
+      const completed = Number(task.postprocess_file_completed || 0)
+      return Math.max(0, Math.min(100, Math.round((completed / total) * 100)))
     }
   }
-  const value = Number(task.progress || 0);
-  return Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+  const value = Number(task.progress || 0)
+  return Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0))
 }
 
 function resultIcon(status, taskKind) {
   if (taskKind === "cross_transfer" && status === "running") {
-    return "mdi-cloud-upload-outline";
+    return "mdi-cloud-upload-outline"
   }
   if (taskKind === "pt_upgrade" && status === "running") {
-    return "mdi-cloud-upload-outline";
+    return "mdi-cloud-upload-outline"
   }
   return ["downloading", "transferring", "postprocessing"].includes(status)
     ? "mdi-cog-sync-outline"
@@ -677,26 +665,26 @@ function resultIcon(status, taskKind) {
 }
 
 function formatSize(value) {
-  let size = Math.max(0, Number(value || 0));
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let unit = 0;
+  let size = Math.max(0, Number(value || 0))
+  const units = ["B", "KB", "MB", "GB", "TB"]
+  let unit = 0
   while (size >= 1024 && unit < units.length - 1) {
-    size /= 1024;
-    unit += 1;
+    size /= 1024
+    unit += 1
   }
-  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`
 }
 
 function formatSpeed(value) {
-  return `${formatSize(value)}/s`;
+  return `${formatSize(value)}/s`
 }
 
 function displayTransferred(task) {
-  return Number(task?.stage_total || 0) > 0 ? Number(task?.stage_transferred || 0) : Number(task?.transferred || 0);
+  return Number(task?.stage_total || 0) > 0 ? Number(task?.stage_transferred || 0) : Number(task?.transferred || 0)
 }
 
 function displayTotal(task) {
-  return Number(task?.stage_total || 0) > 0 ? Number(task?.stage_total || 0) : Number(task?.total || 0);
+  return Number(task?.stage_total || 0) > 0 ? Number(task?.stage_total || 0) : Number(task?.total || 0)
 }
 </script>
 
@@ -1034,25 +1022,30 @@ function displayTotal(task) {
 
 .task-progress :deep(.v-progress-linear__determinate) {
   background: var(--task-progress-gradient) !important;
-  transition: width 0.35s ease,
-  background 0.35s ease;
+  transition:
+    width 0.35s ease,
+    background 0.35s ease;
 }
 
 .task-progress--active :deep(.v-progress-linear__determinate) {
-  background-image: linear-gradient(110deg, transparent 22%, rgba(255, 255, 255, 0.72) 48%, transparent 72%),
-  var(--task-progress-gradient) !important;
-  background-position: -120px 0,
-  0 0;
-  background-size: 120px 100%,
-  100% 100%;
+  background-image:
+    linear-gradient(110deg, transparent 22%, rgba(255, 255, 255, 0.72) 48%, transparent 72%),
+    var(--task-progress-gradient) !important;
+  background-position:
+    -120px 0,
+    0 0;
+  background-size:
+    120px 100%,
+    100% 100%;
   background-repeat: no-repeat;
   animation: task-progress-shimmer 1.15s linear infinite;
 }
 
 @keyframes task-progress-shimmer {
   to {
-    background-position: 120px 0,
-    0 0;
+    background-position:
+      120px 0,
+      0 0;
   }
 }
 

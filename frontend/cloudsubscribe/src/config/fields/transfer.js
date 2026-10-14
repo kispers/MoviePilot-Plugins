@@ -1,7 +1,7 @@
-import {enabled, renderStrmSample, strmProxyStatusLine, strmProxySuggestion, strmVariableHint} from "./helpers.js";
+import { enabled, renderStrmSample, strmProxyStatusLine, strmProxySuggestion, strmVariableHint } from "./helpers.js"
 
 export function createTransferSection(options) {
-  const variableHint = strmVariableHint(options);
+  const variableHint = strmVariableHint(options)
   return {
     value: "transfer",
     title: "转存设置",
@@ -195,17 +195,17 @@ export function createTransferSection(options) {
             label: "视频文件扩展名",
             type: "multi-select",
             items: [
-              {title: ".mkv", value: ".mkv", hint: "Matroska 高清视频容器"},
-              {title: ".mp4", value: ".mp4", hint: "MPEG-4 常见流媒体格式"},
-              {title: ".avi", value: ".avi", hint: "Audio Video Interleaved"},
-              {title: ".iso", value: ".iso", hint: "光盘镜像/蓝光原盘"},
-              {title: ".ts", value: ".ts", hint: "MPEG 传输流"},
-              {title: ".m2ts", value: ".m2ts", hint: "蓝光高清传输流"},
-              {title: ".mov", value: ".mov", hint: "Apple QuickTime 格式"},
-              {title: ".wmv", value: ".wmv", hint: "Windows Media Video"},
-              {title: ".flv", value: ".flv", hint: "Flash 视频格式"},
-              {title: ".webm", value: ".webm", hint: "WebM 开放视频格式"},
-              {title: ".rmvb", value: ".rmvb", hint: "RealMedia 动态比特率"},
+              { title: ".mkv", value: ".mkv", hint: "Matroska 高清视频容器" },
+              { title: ".mp4", value: ".mp4", hint: "MPEG-4 常见流媒体格式" },
+              { title: ".avi", value: ".avi", hint: "Audio Video Interleaved" },
+              { title: ".iso", value: ".iso", hint: "光盘镜像/蓝光原盘" },
+              { title: ".ts", value: ".ts", hint: "MPEG 传输流" },
+              { title: ".m2ts", value: ".m2ts", hint: "蓝光高清传输流" },
+              { title: ".mov", value: ".mov", hint: "Apple QuickTime 格式" },
+              { title: ".wmv", value: ".wmv", hint: "Windows Media Video" },
+              { title: ".flv", value: ".flv", hint: "Flash 视频格式" },
+              { title: ".webm", value: ".webm", hint: "WebM 开放视频格式" },
+              { title: ".rmvb", value: ".rmvb", hint: "RealMedia 动态比特率" },
             ],
             default: [".mkv", ".mp4", ".avi", ".iso"],
             multiple: true,
@@ -221,15 +221,15 @@ export function createTransferSection(options) {
             label: "字幕文件扩展名",
             type: "multi-select",
             items: [
-              {title: ".srt", value: ".srt", hint: "SubRip 文本字幕格式"},
-              {title: ".ass", value: ".ass", hint: "Advanced SubStation Alpha 特效字幕"},
-              {title: ".ssa", value: ".ssa", hint: "SubStation Alpha 传统特效字幕"},
-              {title: ".vtt", value: ".vtt", hint: "Web Video Text Tracks 网页字幕"},
-              {title: ".sub", value: ".sub", hint: "MicroDVD / VobSub 图形字幕"},
-              {title: ".sup", value: ".sup", hint: "Blu-ray PGS 高清图形字幕"},
-              {title: ".idx", value: ".idx", hint: "VobSub 索引文件"},
-              {title: ".smi", value: ".smi", hint: "SAMI 格式字幕"},
-              {title: ".mks", value: ".mks", hint: "Matroska 独立字幕流"},
+              { title: ".srt", value: ".srt", hint: "SubRip 文本字幕格式" },
+              { title: ".ass", value: ".ass", hint: "Advanced SubStation Alpha 特效字幕" },
+              { title: ".ssa", value: ".ssa", hint: "SubStation Alpha 传统特效字幕" },
+              { title: ".vtt", value: ".vtt", hint: "Web Video Text Tracks 网页字幕" },
+              { title: ".sub", value: ".sub", hint: "MicroDVD / VobSub 图形字幕" },
+              { title: ".sup", value: ".sup", hint: "Blu-ray PGS 高清图形字幕" },
+              { title: ".idx", value: ".idx", hint: "VobSub 索引文件" },
+              { title: ".smi", value: ".smi", hint: "SAMI 格式字幕" },
+              { title: ".mks", value: ".mks", hint: "Matroska 独立字幕流" },
             ],
             default: [".srt", ".ass", ".ssa", ".vtt", ".sub", ".sup", ".idx", ".smi", ".mks"],
             multiple: true,
@@ -328,16 +328,14 @@ export function createTransferSection(options) {
             type: "info",
             label: "播放代理与 STRM 示例",
             lines: (config) => {
-              const sample = renderStrmSample(config);
+              const sample = renderStrmSample(config)
               return [
-                sample
-                  ? `STRM 内容：${sample}`
-                  : "填写基础地址、端口与模板后此处实时显示 STRM 内容",
+                sample ? `STRM 内容：${sample}` : "填写基础地址、端口与模板后此处实时显示 STRM 内容",
                 strmProxyStatusLine(config, options),
                 strmProxySuggestion(config, options),
                 variableHint,
                 "示例中的 <变量> 为网盘标识占位，生成时替换为真实值",
-              ].filter(Boolean);
+              ].filter(Boolean)
             },
             cols: 12,
             show: enabled("strm_generate_enabled"),

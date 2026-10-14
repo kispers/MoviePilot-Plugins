@@ -1,17 +1,15 @@
 <template>
   <v-dialog v-model="model" max-width="780" scrollable class="resource-preview-dialog">
     <v-card class="source-preview-card">
-      <v-card-title class="source-preview-header d-flex align-center justify-space-between py-3 px-4">
-        <div class="d-flex align-center ga-2 min-w-0">
-          <v-avatar color="primary" variant="tonal" size="32" class="rounded-lg">
-            <v-icon icon="mdi-folder-open-outline" size="18" />
+      <v-card-title class="source-preview-header d-flex align-center justify-space-between py-2 px-3">
+        <div class="source-preview-heading d-flex align-center ga-2 min-w-0">
+          <v-avatar color="primary" variant="tonal" size="26" class="rounded-lg">
+            <v-icon icon="mdi-folder-open-outline" size="15" />
           </v-avatar>
-          <div class="min-w-0">
-            <div class="text-subtitle-1 font-weight-bold text-truncate">资源内容预览</div>
-            <div class="text-caption text-medium-emphasis text-truncate" :title="meta.share_url || meta.display_name">
-              {{ meta.display_name || meta.share_url || "文件树解析" }}
-            </div>
-          </div>
+          <span class="text-subtitle-2 font-weight-bold flex-none">资源内容预览</span>
+          <span class="text-caption text-medium-emphasis text-truncate" :title="meta.share_url || meta.display_name">
+            {{ meta.display_name || meta.share_url || "文件树解析" }}
+          </span>
         </div>
         <div class="d-flex align-center ga-1">
           <v-btn
@@ -26,38 +24,64 @@
       </v-card-title>
 
       <v-divider />
-      <v-card-text class="source-preview-body pa-4">
-        <v-alert
-          v-if="isLocked"
-          type="warning"
-          variant="tonal"
-          density="compact"
-          class="mb-3 text-caption"
-        >
+      <v-card-text class="source-preview-body pa-3 pt-1">
+        <v-alert v-if="isLocked" type="warning" variant="tonal" density="compact" class="mb-3 text-caption">
           当前内容尚未解锁，仅供查看文件列表。未解锁内容不支持按文件单独转存，请使用积分整包解锁后再入库。
         </v-alert>
 
-        <div class="source-preview-meta mb-3 d-flex align-center ga-2 flex-wrap">
-          <v-chip v-if="meta.provider_name" size="small" variant="tonal" color="primary">
-            <v-icon start icon="mdi-cloud-outline" size="13" />
-            {{ meta.provider_name }}
-          </v-chip>
-          <v-chip v-if="meta.resource_type_name" size="small" variant="tonal" color="secondary">
-            <v-icon start icon="mdi-tag-outline" size="13" />
-            {{ meta.resource_type_name }}
-          </v-chip>
-          <v-chip v-if="meta.size" size="small" variant="tonal" color="info">
-            <v-icon start icon="mdi-harddisk" size="13" />
-            {{ formatBytes(meta.size) }}
-          </v-chip>
-          <v-chip size="small" variant="tonal">共 {{ items.length }} 个项目</v-chip>
-          <v-chip v-if="isLocked" size="small" variant="tonal" color="warning" class="font-weight-medium">
-            <v-icon start icon="mdi-lock-outline" size="13" />
-            未解锁 (需 {{ meta.unlock_points || 0 }} 积分)
-          </v-chip>
+        <div class="source-preview-toolbar mb-2">
+          <div class="source-preview-meta d-flex align-center ga-2 flex-wrap">
+            <v-chip v-if="meta.provider_name" size="small" variant="tonal" color="primary">
+              <v-icon start icon="mdi-cloud-outline" size="13" />
+              {{ meta.provider_name }}
+            </v-chip>
+            <!-- 网盘名与资源类型名常常相同，重复时不重复展示 -->
+            <v-chip
+              v-if="meta.resource_type_name && meta.resource_type_name !== meta.provider_name"
+              size="small"
+              variant="tonal"
+              color="secondary">
+              <v-icon start icon="mdi-tag-outline" size="13" />
+              {{ meta.resource_type_name }}
+            </v-chip>
+            <v-chip v-if="meta.size" size="small" variant="tonal" color="info">
+              <v-icon start icon="mdi-harddisk" size="13" />
+              {{ formatBytes(meta.size) }}
+            </v-chip>
+            <v-chip size="small" variant="tonal">共 {{ items.length }} 个项目</v-chip>
+            <v-chip v-if="isLocked" size="small" variant="tonal" color="warning" class="font-weight-medium">
+              <v-icon start icon="mdi-lock-outline" size="13" />
+              未解锁 (需 {{ meta.unlock_points || 0 }} 积分)
+            </v-chip>
+          </div>
+          <v-text-field
+            v-if="meta.searchable"
+            v-model="keywordInput"
+            class="source-preview-search"
+            density="compact"
+            variant="solo-filled"
+            flat
+            hide-details
+            single-line
+            rounded="lg"
+            clearable
+            prepend-inner-icon="mdi-magnify"
+            placeholder="搜索文件名"
+            :disabled="loading"
+            @keyup.enter="submitSearch()"
+            @click:clear="submitSearch('')" />
         </div>
 
-        <div v-if="breadcrumbs.length > 1" class="source-preview-breadcrumbs mb-2.5">
+        <div v-if="items.length && !isOffline" class="source-preview-breadcrumbs mb-2">
+          <v-checkbox-btn
+            v-if="canTransfer && !isLocked"
+            :model-value="allSelected"
+            density="compact"
+            hide-details
+            color="primary"
+            class="preview-select-all"
+            title="全选"
+            @update:model-value="$emit('toggle-all', $event)" />
           <template v-for="(breadcrumb, index) in breadcrumbs" :key="`${breadcrumb.id}-${index}`">
             <span v-if="index > 0" class="breadcrumb-separator">/</span>
             <v-btn
@@ -69,32 +93,19 @@
               {{ breadcrumb.name }}
             </v-btn>
           </template>
-        </div>
-
-        <div
-          v-if="items.length && !isOffline && !isLocked"
-          class="source-preview-batch-bar d-flex align-center justify-space-between px-3 py-1.5 mb-2 ga-2">
-          <div class="d-flex align-center ga-2">
-            <v-checkbox-btn
-              :model-value="allSelected"
-              density="compact"
-              hide-details
-              color="primary"
-              @update:model-value="$emit('toggle-all', $event)" />
-            <span class="text-caption font-weight-medium">全选本层目录</span>
-            <span v-if="selectedItems.length" class="text-caption text-primary font-weight-bold">
-              (已选 {{ selectedItems.length }} 项)
-            </span>
-          </div>
+          <v-spacer v-if="canTransfer && !isLocked" />
+          <!-- 常驻占位：按钮出现/隐藏都不改变本行高度与宽度 -->
           <v-btn
-            v-if="selectedItems.length"
-            size="small"
+            v-if="canTransfer && !isLocked"
+            size="x-small"
             color="primary"
             variant="flat"
             prepend-icon="mdi-check-all"
-            class="preview-batch-btn font-weight-bold"
+            class="preview-batch-btn font-weight-bold flex-none"
+            :class="{ 'preview-batch-btn--idle': !selectedItems.length }"
+            :disabled="!selectedItems.length"
             @click="$emit('batch-transfer')">
-            批量转存已选项 ({{ selectedItems.length }})
+            转存 ({{ selectedItems.length }})
           </v-btn>
         </div>
 
@@ -115,7 +126,7 @@
                 :class="{ 'source-preview-file--directory': file.can_enter }">
                 <template #prepend>
                   <v-checkbox-btn
-                    v-if="!isOffline && !isLocked"
+                    v-if="canTransfer && !isOffline && !isLocked"
                     :model-value="isSelected(file)"
                     density="compact"
                     hide-details
@@ -142,7 +153,7 @@
                     {{ formatBytes(file.size) }}
                   </span>
                   <v-btn
-                    v-if="!file.is_dir && !isOffline && !isLocked"
+                    v-if="canTransfer && !file.is_dir && !isOffline && !isLocked"
                     size="small"
                     color="primary"
                     variant="tonal"
@@ -175,9 +186,10 @@
         <span v-else-if="isOffline" class="text-caption text-medium-emphasis">
           磁力任务将作为离线下载整体转存，完成后自动识别并整理正片
         </span>
-        <span v-else class="text-caption text-medium-emphasis">
+        <span v-else-if="canTransfer" class="text-caption text-medium-emphasis">
           支持下钻浏览各层级子文件夹，可按需勾选转存
         </span>
+        <span v-else class="text-caption text-medium-emphasis">当前为只读预览，仅用于查看文件列表</span>
         <div class="d-flex ga-2">
           <v-btn variant="tonal" size="small" @click="model = false">关闭</v-btn>
           <v-btn
@@ -196,57 +208,73 @@
 </template>
 
 <script setup>
-import {computed} from "vue";
+import { computed, ref, watch } from "vue"
 import {
   formatBytes,
   isOfflineResourceType,
   previewFileExtension,
   previewFileIcon,
   previewFileStem,
-} from "../../composables/resourceUtils";
+} from "../../composables/resourceUtils"
 
 const props = defineProps({
   modelValue: Boolean,
   loading: Boolean,
-  error: {type: String, default: ""},
-  items: {type: Array, default: () => []},
-  selectedItems: {type: Array, default: () => []},
-  meta: {type: Object, default: () => ({})},
-  breadcrumbs: {type: Array, default: () => []},
-  shareUrl: {type: String, default: ""},
+  error: { type: String, default: "" },
+  items: { type: Array, default: () => [] },
+  selectedItems: { type: Array, default: () => [] },
+  meta: { type: Object, default: () => ({}) },
+  breadcrumbs: { type: Array, default: () => [] },
   allSelected: Boolean,
+  shareUrl: { type: String, default: "" },
   canTransfer: Boolean,
-  isSelected: {type: Function, required: true},
-});
+  isSelected: { type: Function, default: () => () => false },
+})
 const emit = defineEmits([
   "update:modelValue",
   "copy",
-  "open-breadcrumb",
+  "search",
   "open-folder",
+  "open-breadcrumb",
   "toggle-all",
   "toggle-item",
   "single-transfer",
   "batch-transfer",
   "quick-transfer",
-]);
-const model = computed({get: () => props.modelValue, set: (value) => emit("update:modelValue", value)});
+])
+const model = computed({ get: () => props.modelValue, set: (value) => emit("update:modelValue", value) })
+// 搜索框只承载用户自己输入/搜索的关键词，渠道内部的定位词不回填
+const keywordInput = ref("")
+
+// 每次打开弹窗都从空关键词开始，避免上一次搜索的残留
+watch(
+  () => props.modelValue,
+  (visible) => {
+    if (visible) keywordInput.value = ""
+  },
+)
+
+function submitSearch(explicit) {
+  const value = typeof explicit === "string" ? explicit : keywordInput.value
+  emit("search", String(value || "").trim())
+}
 
 const isLocked = computed(() => {
-  const meta = props.meta || {};
-  return Boolean(meta.need_unlock && !meta.is_unlocked && !props.shareUrl);
-});
+  const meta = props.meta || {}
+  return Boolean(meta.need_unlock && !meta.is_unlocked && !props.shareUrl)
+})
 
 const isOffline = computed(() => {
-  const type = String(props.meta?.resource_type || "").toLowerCase();
-  const share = String(props.meta?.share_url || props.shareUrl || "").toLowerCase();
+  const type = String(props.meta?.resource_type || "").toLowerCase()
+  const share = String(props.meta?.share_url || props.shareUrl || "").toLowerCase()
   return (
     isOfflineResourceType(type) ||
     type === "magnet" ||
     type === "ed2k" ||
     share.startsWith("magnet:") ||
     share.startsWith("ed2k://")
-  );
-});
+  )
+})
 </script>
 
 <style scoped>
@@ -257,26 +285,74 @@ const isOffline = computed(() => {
 }
 
 .source-preview-header {
-  min-height: 56px;
+  min-height: 44px;
+}
+
+.source-preview-header .v-avatar {
+  flex: none;
+}
+
+.source-preview-heading {
+  flex: 1 1 auto;
 }
 
 .source-preview-meta {
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
-.source-preview-batch-bar {
-  background: rgba(var(--v-theme-primary), 0.05);
-  border: 1px solid rgba(var(--v-theme-primary), 0.16);
-  border-radius: 8px;
+.source-preview-meta :deep(.v-chip) {
+  height: 24px;
+  font-size: 0.75rem;
+}
+
+.source-preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.source-preview-toolbar .source-preview-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.source-preview-search {
+  flex: 1 1 200px;
+  min-width: 180px;
+  max-width: 300px;
+}
+
+.source-preview-search :deep(.v-field) {
+  min-height: 32px;
+}
+
+.source-preview-search :deep(.v-field__input) {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
 }
 
 .source-preview-breadcrumbs {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 2px;
   padding: 4px 6px;
+  min-height: 30px;
+  overflow: hidden;
   border-bottom: 1px solid rgba(var(--v-border-color), 0.08);
+}
+
+.preview-select-all {
+  flex: none;
+  margin-inline-end: 2px;
+}
+
+.preview-batch-btn--idle {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .breadcrumb-separator {

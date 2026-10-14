@@ -31,13 +31,13 @@
 
 <script setup>
 defineProps({
-  tabs: {type: Array, default: () => []},
-  activeTab: {type: String, default: ""},
+  tabs: { type: Array, default: () => [] },
+  activeTab: { type: String, default: "" },
   searchMode: Boolean,
   filterVisible: Boolean,
-  filterCount: {type: Number, default: 0},
-});
-defineEmits(["change", "toggle-filter"]);
+  filterCount: { type: Number, default: 0 },
+})
+defineEmits(["change", "toggle-filter"])
 </script>
 
 <style scoped>

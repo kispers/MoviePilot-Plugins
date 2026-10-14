@@ -130,7 +130,11 @@
                   <span v-if="getMediaRatingInfo(activeMedia, 'douban').votes" class="rating-votes text-caption">
                     {{ getMediaRatingInfo(activeMedia, "douban").votes }}
                   </span>
-                  <v-icon v-if="activeMedia.douban_id" icon="mdi-open-in-new" size="10" class="rating-ext-icon ml-0.5" />
+                  <v-icon
+                    v-if="activeMedia.douban_id"
+                    icon="mdi-open-in-new"
+                    size="10"
+                    class="rating-ext-icon ml-0.5" />
                 </div>
                 <div
                   v-if="
@@ -145,12 +149,13 @@
                   @click="openExternalRating(activeMedia.tmdb_id ? 'tmdb' : 'imdb')">
                   <span class="pill-brand-svg tmdb-svg-wrap" v-html="RAW_ICONS.tmdb" />
                   <span class="rating-val font-weight-bold color-tmdb">{{ getRatingText(activeMedia) }}/10</span>
-                  <v-icon v-if="activeMedia.tmdb_id || activeMedia.imdb_id" icon="mdi-open-in-new" size="10" class="rating-ext-icon ml-0.5" />
+                  <v-icon
+                    v-if="activeMedia.tmdb_id || activeMedia.imdb_id"
+                    icon="mdi-open-in-new"
+                    size="10"
+                    class="rating-ext-icon ml-0.5" />
                 </div>
-                <span
-                  v-for="genre in displayedGenres"
-                  :key="genre"
-                  class="meta-tag-pill meta-tag-pill--genre">
+                <span v-for="genre in displayedGenres" :key="genre" class="meta-tag-pill meta-tag-pill--genre">
                   {{ genre }}
                 </span>
                 <span
@@ -168,7 +173,7 @@
                 'hero-overview--with-console': activeMedia.media_type === 'tv' && activeMediaSeasons.length,
                 'hero-overview--expanded': isOverviewExpanded,
               }"
-              :title="isOverviewExpanded ? '点击收起简介' : (activeMedia.overview || '暂无作品简介。')"
+              :title="isOverviewExpanded ? '点击收起简介' : activeMedia.overview || '暂无作品简介。'"
               @click="isOverviewExpanded = !isOverviewExpanded">
               {{ activeMedia.overview || "暂无作品简介。" }}
             </p>
@@ -244,7 +249,7 @@
               <template #activator="{ props: menuProps }">
                 <v-badge
                   :model-value="isFilterActive"
-                  :content="activeResourceFilterCount || (selectedResourceSpecs.length + (resourceSearchQuery ? 1 : 0))"
+                  :content="activeResourceFilterCount || selectedResourceSpecs.length + (resourceSearchQuery ? 1 : 0)"
                   color="primary"
                   class="category-filter-badge flex-shrink-0">
                   <v-btn
@@ -348,7 +353,8 @@
               在【{{ currentSubTabLabel }}】中未找到符合筛选条件的资源
             </p>
             <p class="text-caption text-medium-emphasis mt-1">
-              当前已生效关键词、规格或字幕组过滤，您可以点击下方一键清空</p>
+              当前已生效关键词、规格或字幕组过滤，您可以点击下方一键清空
+            </p>
             <v-btn
               color="primary"
               variant="tonal"
@@ -362,7 +368,10 @@
           <template v-else>
             <v-icon icon="mdi-database-search-outline" size="52" color="medium-emphasis" />
             <p class="mt-2 text-body-2 font-weight-medium text-high-emphasis">
-              {{ (!currentChannelResources || currentChannelResources.length === 0) ? "未检索到候选资源" : "当前网盘分类暂无资源"
+              {{
+                !currentChannelResources || currentChannelResources.length === 0
+                  ? "未检索到候选资源"
+                  : "当前网盘分类暂无资源"
               }}
             </p>
             <p class="text-caption text-medium-emphasis mt-1">可尝试切换上方其他渠道，或点击下方手动刷新重试</p>
@@ -511,7 +520,7 @@
 </template>
 
 <script setup>
-import {computed, ref, watch} from "vue";
+import { computed, ref, watch } from "vue"
 import {
   canPreviewResource as defaultCanPreviewResource,
   copyToClipboard as defaultCopyToClipboard,
@@ -530,59 +539,59 @@ import {
   previewResourceKey as defaultPreviewResourceKey,
   RAW_ICONS as DEFAULT_RAW_ICONS,
   resKey as defaultResKey,
-} from "../../composables/resourceUtils";
+} from "../../composables/resourceUtils"
 
 const props = defineProps({
   modelValue: Boolean,
   fullscreen: Boolean,
-  activeMedia: {type: Object, default: null},
+  activeMedia: { type: Object, default: null },
   detailLoading: Boolean,
-  activeDetailSeason: {type: Number, default: 1},
-  activeMediaSeasons: {type: Array, default: () => []},
-  currentSeasonMissingEpisodes: {type: Array, default: () => []},
-  availableChannels: {type: Array, default: () => []},
-  activeChannelTab: {type: String, default: ""},
-  activeResourceTab: {type: String, default: ""},
-  resourceSearchQuery: {type: String, default: ""},
-  selectedResourceSpecs: {type: Array, default: () => []},
-  activeResourceFilterCount: {type: Number, default: 0},
-  resetResourceFilters: {type: Function, default: null},
-  currentChannelResources: {type: Array, default: () => []},
-  channelLoading: {type: Object, default: () => ({})},
-  channelSearched: {type: Object, default: () => ({})},
-  currentChannelResourceTabs: {type: Array, default: () => []},
-  currentChannelFilteredResources: {type: Array, default: () => []},
-  rawIcons: {type: Object, default: () => ({})},
-  downloadingIndex: {type: Number, default: -1},
-  unlockingKey: {type: String, default: ""},
-  previewingKey: {type: String, default: ""},
-  getBackdropStyle: {type: Function, default: null},
-  handlePosterError: {type: Function, default: null},
-  copyIdText: {type: Function, default: null},
-  getLibrarySummary: {type: Function, default: null},
-  getMediaRatingInfo: {type: Function, default: null},
-  getRatingValue: {type: Function, default: null},
-  getRatingText: {type: Function, default: null},
-  getMediaGenresList: {type: Function, default: null},
-  onChannelTabChange: {type: Function, default: null},
-  getChannelCount: {type: Function, default: null},
-  getSourceName: {type: Function, default: null},
-  searchChannel: {type: Function, default: null},
-  resKey: {type: Function, default: null},
-  getTagColorClass: {type: Function, default: null},
-  getResourceSize: {type: Function, default: null},
-  openUnlockDialog: {type: Function, default: null},
-  canPreviewResource: {type: Function, default: null},
-  previewResourceKey: {type: Function, default: null},
-  previewResource: {type: Function, default: null},
-  copyToClipboard: {type: Function, default: null},
-  handleQuickDownload: {type: Function, default: null},
-  isCrossTransferResource: {type: Function, default: null},
-  openCrossTransferDialog: {type: Function, default: null},
-  api: {type: Object, default: null},
-  pluginId: {type: String, default: "CloudSubscribe"},
-  showMessage: {type: Function, default: null},
-});
+  activeDetailSeason: { type: Number, default: 1 },
+  activeMediaSeasons: { type: Array, default: () => [] },
+  currentSeasonMissingEpisodes: { type: Array, default: () => [] },
+  availableChannels: { type: Array, default: () => [] },
+  activeChannelTab: { type: String, default: "" },
+  activeResourceTab: { type: String, default: "" },
+  resourceSearchQuery: { type: String, default: "" },
+  selectedResourceSpecs: { type: Array, default: () => [] },
+  activeResourceFilterCount: { type: Number, default: 0 },
+  resetResourceFilters: { type: Function, default: null },
+  currentChannelResources: { type: Array, default: () => [] },
+  channelLoading: { type: Object, default: () => ({}) },
+  channelSearched: { type: Object, default: () => ({}) },
+  currentChannelResourceTabs: { type: Array, default: () => [] },
+  currentChannelFilteredResources: { type: Array, default: () => [] },
+  rawIcons: { type: Object, default: () => ({}) },
+  downloadingIndex: { type: Number, default: -1 },
+  unlockingKey: { type: String, default: "" },
+  previewingKey: { type: String, default: "" },
+  getBackdropStyle: { type: Function, default: null },
+  handlePosterError: { type: Function, default: null },
+  copyIdText: { type: Function, default: null },
+  getLibrarySummary: { type: Function, default: null },
+  getMediaRatingInfo: { type: Function, default: null },
+  getRatingValue: { type: Function, default: null },
+  getRatingText: { type: Function, default: null },
+  getMediaGenresList: { type: Function, default: null },
+  onChannelTabChange: { type: Function, default: null },
+  getChannelCount: { type: Function, default: null },
+  getSourceName: { type: Function, default: null },
+  searchChannel: { type: Function, default: null },
+  resKey: { type: Function, default: null },
+  getTagColorClass: { type: Function, default: null },
+  getResourceSize: { type: Function, default: null },
+  openUnlockDialog: { type: Function, default: null },
+  canPreviewResource: { type: Function, default: null },
+  previewResourceKey: { type: Function, default: null },
+  previewResource: { type: Function, default: null },
+  copyToClipboard: { type: Function, default: null },
+  handleQuickDownload: { type: Function, default: null },
+  isCrossTransferResource: { type: Function, default: null },
+  openCrossTransferDialog: { type: Function, default: null },
+  api: { type: Object, default: null },
+  pluginId: { type: String, default: "CloudSubscribe" },
+  showMessage: { type: Function, default: null },
+})
 
 const emit = defineEmits([
   "update:modelValue",
@@ -591,169 +600,169 @@ const emit = defineEmits([
   "update:active-resource-tab",
   "update:resource-search-query",
   "update:selected-resource-specs",
-]);
+])
 
-const model = computed({get: () => props.modelValue, set: (value) => emit("update:modelValue", value)});
+const model = computed({ get: () => props.modelValue, set: (value) => emit("update:modelValue", value) })
 
-const isOverviewExpanded = ref(false);
-const isGenresExpanded = ref(false);
+const isOverviewExpanded = ref(false)
+const isGenresExpanded = ref(false)
 watch(
   () => props.activeMedia,
   () => {
-    isOverviewExpanded.value = false;
-    isGenresExpanded.value = false;
-  }
-);
+    isOverviewExpanded.value = false
+    isGenresExpanded.value = false
+  },
+)
 
-const MAX_VISIBLE_GENRES = 6;
+const MAX_VISIBLE_GENRES = 6
 const allGenresList = computed(() => {
-  return (props.getMediaGenresList ? props.getMediaGenresList(props.activeMedia) : []) || [];
-});
+  return (props.getMediaGenresList ? props.getMediaGenresList(props.activeMedia) : []) || []
+})
 
 const displayedGenres = computed(() => {
-  const list = allGenresList.value;
+  const list = allGenresList.value
   if (isGenresExpanded.value || list.length <= MAX_VISIBLE_GENRES) {
-    return list;
+    return list
   }
-  return list.slice(0, MAX_VISIBLE_GENRES);
-});
+  return list.slice(0, MAX_VISIBLE_GENRES)
+})
 
 const extraGenresCount = computed(() => {
-  const list = allGenresList.value;
-  return Math.max(0, list.length - MAX_VISIBLE_GENRES);
-});
+  const list = allGenresList.value
+  return Math.max(0, list.length - MAX_VISIBLE_GENRES)
+})
 
 const channelModel = computed({
   get: () => props.activeChannelTab,
   set: (value) => emit("update:active-channel-tab", value),
-});
-const isPointUnlockResource = (res) => defaultIsPointUnlockResource(res);
+})
+const isPointUnlockResource = (res) => defaultIsPointUnlockResource(res)
 
-const displayedResources = computed(() => props.currentChannelFilteredResources || []);
+const displayedResources = computed(() => props.currentChannelFilteredResources || [])
 
 const currentSubTabLabel = computed(() => {
-  const found = (props.currentChannelResourceTabs || []).find((t) => t.value === props.activeResourceTab);
-  return found ? found.title : (props.currentChannelResourceTabs?.[0]?.title || props.activeResourceTab || "资源列表");
-});
+  const found = (props.currentChannelResourceTabs || []).find((t) => t.value === props.activeResourceTab)
+  return found ? found.title : props.currentChannelResourceTabs?.[0]?.title || props.activeResourceTab || "资源列表"
+})
 
 const isFilterActive = computed(() => {
   return (
     Boolean(String(props.resourceSearchQuery || "").trim()) ||
     (Array.isArray(props.selectedResourceSpecs) && props.selectedResourceSpecs.length > 0)
-  );
-});
+  )
+})
 
 const quickSpecOptions = computed(() => {
   const options = [
-    {key: "4K", label: "4K"},
-    {key: "1080P", label: "1080P"},
-    {key: "原盘", label: "原盘"},
-    {key: "HDR", label: "HDR"},
-    {key: "杜比视界", label: "杜比视界"},
-  ];
+    { key: "4K", label: "4K" },
+    { key: "1080P", label: "1080P" },
+    { key: "原盘", label: "原盘" },
+    { key: "HDR", label: "HDR" },
+    { key: "杜比视界", label: "杜比视界" },
+  ]
   const hasPointResources = (props.resources || []).some(
     (r) => r?.need_unlock || r?.unlock_points !== undefined || r?.is_point_unlock,
-  );
+  )
   if (hasPointResources) {
-    options.push({key: "免费", label: "免费"});
+    options.push({ key: "免费", label: "免费" })
   }
-  return options;
-});
+  return options
+})
 
 function toggleSpec(specKey) {
-  const current = [...(props.selectedResourceSpecs || [])];
-  const idx = current.indexOf(specKey);
+  const current = [...(props.selectedResourceSpecs || [])]
+  const idx = current.indexOf(specKey)
   if (idx >= 0) {
-    current.splice(idx, 1);
+    current.splice(idx, 1)
   } else {
-    current.push(specKey);
+    current.push(specKey)
   }
-  emit("update:selected-resource-specs", current);
+  emit("update:selected-resource-specs", current)
 }
 
 function handleResetFilters() {
-  emit("update:resource-search-query", "");
-  emit("update:selected-resource-specs", []);
-  selectedFansubTab.value = "";
+  emit("update:resource-search-query", "")
+  emit("update:selected-resource-specs", [])
+  selectedFansubTab.value = ""
   if (props.resetResourceFilters) {
-    props.resetResourceFilters();
+    props.resetResourceFilters()
   }
 }
 
 // 工具函数安全封装：优先使用外部传入，缺失时使用共享工具库兜底，彻底防止未捕获异常
 const getBackdropStyle = (media) =>
-  props.getBackdropStyle ? props.getBackdropStyle(media) : defaultGetBackdropStyle(media);
+  props.getBackdropStyle ? props.getBackdropStyle(media) : defaultGetBackdropStyle(media)
 const handlePosterError = (media) =>
-  props.handlePosterError ? props.handlePosterError(media) : defaultHandlePosterError(media);
+  props.handlePosterError ? props.handlePosterError(media) : defaultHandlePosterError(media)
 const getLibrarySummary = (media) =>
-  props.getLibrarySummary ? props.getLibrarySummary(media) : defaultGetLibrarySummary(media);
+  props.getLibrarySummary ? props.getLibrarySummary(media) : defaultGetLibrarySummary(media)
 const getMediaRatingInfo = (media, platform) =>
-  props.getMediaRatingInfo ? props.getMediaRatingInfo(media, platform) : defaultGetMediaRatingInfo(media, platform);
-const getRatingValue = (media) => (props.getRatingValue ? props.getRatingValue(media) : defaultGetRatingValue(media));
-const getRatingText = (media) => (props.getRatingText ? props.getRatingText(media) : defaultGetRatingText(media));
+  props.getMediaRatingInfo ? props.getMediaRatingInfo(media, platform) : defaultGetMediaRatingInfo(media, platform)
+const getRatingValue = (media) => (props.getRatingValue ? props.getRatingValue(media) : defaultGetRatingValue(media))
+const getRatingText = (media) => (props.getRatingText ? props.getRatingText(media) : defaultGetRatingText(media))
 const getMediaGenresList = (media) =>
-  props.getMediaGenresList ? props.getMediaGenresList(media) : defaultGetMediaGenresList(media);
-const getSourceName = (source) => (props.getSourceName ? props.getSourceName(source) : defaultGetSourceName(source));
-const resKey = (res, idx) => (props.resKey ? props.resKey(res, idx) : defaultResKey(res, idx));
-const getTagColorClass = (tag) => (props.getTagColorClass ? props.getTagColorClass(tag) : defaultGetTagColorClass(tag));
-const getResourceSize = (res) => (props.getResourceSize ? props.getResourceSize(res) : defaultGetResourceSize(res));
+  props.getMediaGenresList ? props.getMediaGenresList(media) : defaultGetMediaGenresList(media)
+const getSourceName = (source) => (props.getSourceName ? props.getSourceName(source) : defaultGetSourceName(source))
+const resKey = (res, idx) => (props.resKey ? props.resKey(res, idx) : defaultResKey(res, idx))
+const getTagColorClass = (tag) => (props.getTagColorClass ? props.getTagColorClass(tag) : defaultGetTagColorClass(tag))
+const getResourceSize = (res) => (props.getResourceSize ? props.getResourceSize(res) : defaultGetResourceSize(res))
 const canPreviewResource = (res) =>
-  props.canPreviewResource ? props.canPreviewResource(res) : defaultCanPreviewResource(res);
+  props.canPreviewResource ? props.canPreviewResource(res) : defaultCanPreviewResource(res)
 const previewResourceKey = (res) =>
-  props.previewResourceKey ? props.previewResourceKey(res) : defaultPreviewResourceKey(res);
+  props.previewResourceKey ? props.previewResourceKey(res) : defaultPreviewResourceKey(res)
 const isCrossTransferResource = (res) =>
-  props.isCrossTransferResource ? props.isCrossTransferResource(res) : defaultIsCrossTransferResource(res);
-const copyToClipboard = (text) => (props.copyToClipboard ? props.copyToClipboard(text) : defaultCopyToClipboard(text));
-const RAW_ICONS = props.rawIcons && Object.keys(props.rawIcons).length ? props.rawIcons : DEFAULT_RAW_ICONS;
+  props.isCrossTransferResource ? props.isCrossTransferResource(res) : defaultIsCrossTransferResource(res)
+const copyToClipboard = (text) => (props.copyToClipboard ? props.copyToClipboard(text) : defaultCopyToClipboard(text))
+const RAW_ICONS = props.rawIcons && Object.keys(props.rawIcons).length ? props.rawIcons : DEFAULT_RAW_ICONS
 
 function getMergedResourceTags(res) {
-  return Array.isArray(res?.tags) ? res.tags : [];
+  return Array.isArray(res?.tags) ? res.tags : []
 }
 
 function copyIdText(type, id) {
   if (props.copyIdText) {
-    props.copyIdText(type, id);
+    props.copyIdText(type, id)
   } else {
-    copyToClipboard(String(id));
+    copyToClipboard(String(id))
   }
 }
 
 function openExternalRating(source) {
-  const m = props.activeMedia;
-  if (!m) return;
-  let url = "";
+  const m = props.activeMedia
+  if (!m) return
+  let url = ""
   if (source === "tmdb" && m.tmdb_id) {
-    const type = m.media_type === "tv" ? "tv" : "movie";
-    url = `https://www.themoviedb.org/${type}/${m.tmdb_id}`;
+    const type = m.media_type === "tv" ? "tv" : "movie"
+    url = `https://www.themoviedb.org/${type}/${m.tmdb_id}`
   } else if (source === "imdb" && m.imdb_id) {
-    url = `https://www.imdb.com/title/${m.imdb_id}/`;
+    url = `https://www.imdb.com/title/${m.imdb_id}/`
   } else if (source === "douban" && m.douban_id) {
-    url = `https://movie.douban.com/subject/${m.douban_id}/`;
+    url = `https://movie.douban.com/subject/${m.douban_id}/`
   }
   if (url) {
-    window.open(url, "_blank", "noopener,noreferrer");
+    window.open(url, "_blank", "noopener,noreferrer")
   }
 }
 
 // 影视中文标题与原始片名展示计算（对齐图3排版规范）
 const displayTitle = computed(() => {
-  const m = props.activeMedia;
-  if (!m) return "";
-  return m.cn_title || m.title || m.name || "未命名媒体";
-});
+  const m = props.activeMedia
+  if (!m) return ""
+  return m.cn_title || m.title || m.name || "未命名媒体"
+})
 
 const displayOriginalTitle = computed(() => {
-  const m = props.activeMedia;
-  if (!m) return "";
-  const orig = String(m.original_title || m.original_name || "").trim();
-  const disp = String(displayTitle.value || "").trim();
-  if (!orig || orig.toLowerCase() === disp.toLowerCase()) return "";
-  return orig;
-});
+  const m = props.activeMedia
+  if (!m) return ""
+  const orig = String(m.original_title || m.original_name || "").trim()
+  const disp = String(displayTitle.value || "").trim()
+  if (!orig || orig.toLowerCase() === disp.toLowerCase()) return ""
+  return orig
+})
 
 const closeMediaDetail = () => {
-  model.value = false;
-};
+  model.value = false
+}
 </script>
 
 <style scoped>

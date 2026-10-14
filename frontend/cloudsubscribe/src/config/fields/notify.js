@@ -1,4 +1,4 @@
-import {enabled} from "./helpers.js";
+import { enabled } from "./helpers.js"
 
 export function createNotifySection(options) {
   return {
@@ -93,7 +93,7 @@ export function createNotifySection(options) {
         title: "消息通知",
         icon: "mdi-message-badge-outline",
         fields: [
-          {key: "notify", label: "发送消息通知", type: "switch", cols: 4},
+          { key: "notify", label: "发送消息通知", type: "switch", cols: 4 },
           {
             key: "notification_type",
             label: "消息通知类型",

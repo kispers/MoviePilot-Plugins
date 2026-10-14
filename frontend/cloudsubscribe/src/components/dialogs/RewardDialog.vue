@@ -19,32 +19,30 @@
           aspect-ratio="1"
           class="reward-qrcode rounded-lg elevation-2 mx-auto" />
       </div>
-      <div class="text-caption text-medium-emphasis">
-        微信扫一扫 · 感谢您的支持与鼓励 ❤️
-      </div>
+      <div class="text-caption text-medium-emphasis">微信扫一扫 · 感谢您的支持与鼓励 ❤️</div>
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import {computed} from "vue";
-import {REWARD_IMAGE_SRC} from "../../assets/rewardImage.js";
+import { computed } from "vue"
+import { REWARD_IMAGE_SRC } from "../../assets/rewardImage.js"
 
-const rewardImageSrc = REWARD_IMAGE_SRC;
+const rewardImageSrc = REWARD_IMAGE_SRC
 
 const props = defineProps({
   modelValue: {
     type: Boolean,
     default: false,
   },
-});
+})
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue"])
 
 const visible = computed({
   get: () => props.modelValue,
   set: (val) => emit("update:modelValue", val),
-});
+})
 </script>
 
 <style scoped>

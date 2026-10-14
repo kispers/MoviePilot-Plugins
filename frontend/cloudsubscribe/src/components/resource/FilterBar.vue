@@ -52,29 +52,29 @@
 </template>
 
 <script setup>
-import {computed} from "vue";
+import { computed } from "vue"
 
 const props = defineProps({
   visible: Boolean,
-  modelValue: {type: Object, required: true},
-  options: {type: Object, required: true},
-  activeCount: {type: Number, default: 0},
-});
-const emit = defineEmits(["update:modelValue", "reset"]);
+  modelValue: { type: Object, required: true },
+  options: { type: Object, required: true },
+  activeCount: { type: Number, default: 0 },
+})
+const emit = defineEmits(["update:modelValue", "reset"])
 const groups = computed(() => [
-  {key: "status", label: "收录状态", options: props.options.status || []},
-  {key: "category", label: "类别", options: props.options.category || []},
-  {key: "type", label: "风格", options: props.options.type || []},
-  {key: "region", label: "地区", options: props.options.region || []},
-  {key: "language", label: "语言", options: props.options.language || []},
-  {key: "year", label: "年份", options: props.options.year || []},
-  {key: "rating", label: "评分", options: props.options.rating || []},
-]);
-const optionValue = (option) => (typeof option === "object" ? option.value : option);
-const optionTitle = (option) => (typeof option === "object" ? option.title : option);
+  { key: "status", label: "收录状态", options: props.options.status || [] },
+  { key: "category", label: "类别", options: props.options.category || [] },
+  { key: "type", label: "风格", options: props.options.type || [] },
+  { key: "region", label: "地区", options: props.options.region || [] },
+  { key: "language", label: "语言", options: props.options.language || [] },
+  { key: "year", label: "年份", options: props.options.year || [] },
+  { key: "rating", label: "评分", options: props.options.rating || [] },
+])
+const optionValue = (option) => (typeof option === "object" ? option.value : option)
+const optionTitle = (option) => (typeof option === "object" ? option.title : option)
 
 function update(key, value) {
-  emit("update:modelValue", {...props.modelValue, [key]: value});
+  emit("update:modelValue", { ...props.modelValue, [key]: value })
 }
 </script>
 

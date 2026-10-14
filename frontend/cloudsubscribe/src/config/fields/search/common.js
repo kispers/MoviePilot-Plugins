@@ -1,4 +1,4 @@
-import {enabled} from "../helpers.js";
+import { enabled } from "../helpers.js"
 
 export function createCommonSearchGroups(resourceTypeItems, sourceItems = []) {
   return [

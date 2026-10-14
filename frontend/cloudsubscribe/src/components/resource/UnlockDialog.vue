@@ -30,14 +30,14 @@
   </v-dialog>
 </template>
 <script setup>
-import {computed} from "vue";
+import { computed } from "vue"
 
 const props = defineProps({
   modelValue: Boolean,
-  item: {type: Object, default: null},
-  error: {type: String, default: ""},
+  item: { type: Object, default: null },
+  error: { type: String, default: "" },
   loading: Boolean,
-});
-const emit = defineEmits(["update:modelValue", "confirm"]);
-const model = computed({get: () => props.modelValue, set: (value) => emit("update:modelValue", value)});
+})
+const emit = defineEmits(["update:modelValue", "confirm"])
+const model = computed({ get: () => props.modelValue, set: (value) => emit("update:modelValue", value) })
 </script>
