@@ -4,24 +4,23 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from .client import OnlineDocumentClient
-from .provider import create_online_docs_provider
+from .client import OnlineDocsClient
+from .provider import create_onlinedocs_provider
 from ...core.definitions import FieldSpec, GroupSpec, SearchSourceDefinition
 
 
 class OnlineDocsSourceDefinition(SearchSourceDefinition):
     """在线文档搜索渠道规范。"""
 
-    id = "online_docs"
+    id = "onlinedocs"
     name = "在线文档"
     icon = "mdi-file-document-outline"
     order = 110
 
     @classmethod
     def create_client(cls, config: Dict[str, Any], context: Optional[Any] = None) -> Any:
-        return OnlineDocumentClient(
-            documents=cls.config_value(config, "online_docs", []) or [],
-            resource_types=cls.config_value(config, "online_docs_resource_types", []) or [],
+        return OnlineDocsClient(
+            documents=cls.config_value(config, "onlinedocs", []) or [],
             proxy=(context or {}).get("proxy"),
         )
 
@@ -29,12 +28,12 @@ class OnlineDocsSourceDefinition(SearchSourceDefinition):
     def get_config_groups(cls, context: Optional[Dict[str, Any]] = None) -> List[GroupSpec]:
         return [
             GroupSpec(
-                tab="online_docs",
+                tab="onlinedocs",
                 title="在线文档",
                 icon="mdi-file-document-outline",
                 fields=[
                     FieldSpec(
-                        key="online_docs",
+                        key="onlinedocs",
                         label="在线文档",
                         type="online-documents",
                         default=[{"url": "", "resource_types": []}],
@@ -42,10 +41,10 @@ class OnlineDocsSourceDefinition(SearchSourceDefinition):
                         cols=12,
                     ),
                     FieldSpec(
-                        key="test_online_docs",
+                        key="test_onlinedocs",
                         label="测试搜索",
                         type="test-source",
-                        source="online_docs",
+                        source="onlinedocs",
                         cols=12,
                     ),
                 ],
@@ -60,4 +59,4 @@ class OnlineDocsSourceDefinition(SearchSourceDefinition):
         resource_types = ctx.get("resource_types", ())
         if not client or not resource_types:
             return None
-        return create_online_docs_provider(client, resource_types)
+        return create_onlinedocs_provider(client, resource_types)

@@ -7,7 +7,7 @@ Anime Garden 是动漫花园（dmhy.org）第三方镜像站以及动画 BT 资�
 from typing import Any, Dict, Iterable, List, Optional
 from urllib.parse import urlparse
 
-from ..http_client import (
+from ...utils.http_client import (
     RequestGate,
     gated_request,
     normalize_proxies,

@@ -6,7 +6,7 @@ UIndex 正常访问无需盾；仅在直连被 Cloudflare Managed Challenge 拦�
 
 from typing import Any, Optional
 
-from ..cloudflare import fetch_cloudflare_html, is_cloudflare_challenge
+from ...utils.cloudflare import fetch_cloudflare_html, is_cloudflare_challenge
 
 
 class UIndexSecurityError(RuntimeError):

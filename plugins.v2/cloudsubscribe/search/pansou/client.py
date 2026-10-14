@@ -10,13 +10,13 @@ from typing import Any, Callable, Dict, List, Optional
 
 from app.log import logger
 
-from ..http_client import (
+from ..types import PANSOU_RESOURCE_TYPES
+from ...utils.http_client import (
     RequestGate,
     gated_request,
     normalize_proxies,
     requests,
 )
-from ..types import PANSOU_RESOURCE_TYPES
 
 
 class PanSouClient:

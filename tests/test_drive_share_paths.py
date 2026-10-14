@@ -115,9 +115,9 @@ register_mock("cloudsubscribe.drive.yun139.client")
 register_package("cloudsubscribe.drive.guangya", paths=[_plugin_dir("drive", "guangya")])
 register_mock("cloudsubscribe.drive.guangya.client")
 
-register_package("cloudsubscribe.search.online_docs", paths=[_plugin_dir("search", "online_docs")])
-register_mock("cloudsubscribe.search.online_docs.client")
-register_mock("cloudsubscribe.search.online_docs.provider")
+register_package("cloudsubscribe.search.onlinedocs", paths=[_plugin_dir("search", "onlinedocs")])
+register_mock("cloudsubscribe.search.onlinedocs.client")
+register_mock("cloudsubscribe.search.onlinedocs.provider")
 
 TianyiShareService = load_module(
     "cloudsubscribe.drive.tianyi.share",
@@ -139,8 +139,8 @@ AliPanShareService = load_module(
 ).AliPanShareService
 
 OnlineDocsSourceDefinition = load_module(
-    "cloudsubscribe.search.online_docs.definition",
-    "plugins.v2/cloudsubscribe/search/online_docs/definition.py",
+    "cloudsubscribe.search.onlinedocs.definition",
+    "plugins.v2/cloudsubscribe/search/onlinedocs/definition.py",
 ).OnlineDocsSourceDefinition
 
 
@@ -254,11 +254,11 @@ class TestGuangyaShareRelativePath(unittest.TestCase):
 class TestOnlineDocsDefinition(unittest.TestCase):
     """测试在线文档配置规范声明。"""
 
-    def test_online_docs_field_spec(self):
+    def test_onlinedocs_field_spec(self):
         groups = OnlineDocsSourceDefinition.get_config_groups()
         self.assertEqual(len(groups), 1)
         fields = groups[0].fields
-        docs_field = next(f for f in fields if f.key == "online_docs")
+        docs_field = next(f for f in fields if f.key == "onlinedocs")
         self.assertEqual(docs_field.type, "online-documents")
         self.assertEqual(docs_field.cols, 12)
         # 验证已简化定义，不再包含冗余静态 items

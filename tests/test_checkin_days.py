@@ -22,10 +22,10 @@ register_mock("cloudsubscribe.core.services")
 register_mock("cloudsubscribe.search")
 register_mock("cloudsubscribe.search.hdhaven")
 register_mock("cloudsubscribe.search.hdhaven.security")
-register_mock("cloudsubscribe.search.cloudflare")
-register_mock("cloudsubscribe.search.http_client")
 register_mock("cloudsubscribe.utils")
 register_mock("cloudsubscribe.utils.cache")
+register_mock("cloudsubscribe.utils.cloudflare")
+register_mock("cloudsubscribe.utils.http_client")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 plugins_v2_path = os.path.join(project_root, "plugins.v2")
@@ -51,7 +51,7 @@ mod_c.settings.TZ = "Asia/Shanghai"
 spec_c.loader.exec_module(mod_c)
 CheckinService = mod_c.CheckinService
 
-# 加载聚影 client（依赖已被 mock 的 cloudsubscribe.search.http_client）
+# 加载聚影 client（依赖已被 mock 的 cloudsubscribe.utils.http_client）
 juying_client_path = os.path.join(plugins_v2_path, "cloudsubscribe/search/juying/client.py")
 spec_j = importlib.util.spec_from_file_location("cloudsubscribe.search.juying.client", juying_client_path)
 mod_j = importlib.util.module_from_spec(spec_j)
@@ -482,6 +482,42 @@ class TestP115ClientCheckin(unittest.TestCase):
         self.assertIn("1239", res["message"])
         self.assertEqual(res["details"]["current_points"], 1239)
         self.assertEqual(res["details"]["reward_points"], 5)
+
+
+class TestCheckinOverviewHidesDisabled(unittest.TestCase):
+    """仪表盘签到概览不应展示未启用的渠道。"""
+
+    def test_disabled_channel_hidden(self):
+        owner = MagicMock()
+        owner._get_data_store.return_value.load_checkin_snapshot.return_value = {
+            "histories": {}, "schedule": {}
+        }
+        service = CheckinService(owner)
+        enabled_channel = {
+            "provider": "enabled_ch", "name": "已启用渠道",
+            "enabled": True, "configured": True,
+            "status": {"key": "success", "label": "签到成功"},
+        }
+        disabled_channel = {
+            "provider": "disabled_ch", "name": "未启用渠道",
+            "enabled": False, "configured": True,
+            "status": {"key": "disabled", "label": "未启用"},
+        }
+        providers = {
+            "enabled_ch": MagicMock(key="enabled_ch", name="已启用渠道"),
+            "disabled_ch": MagicMock(key="disabled_ch", name="未启用渠道"),
+        }
+        with patch.object(mod_c, "get_checkin_definitions", return_value=providers), \
+                patch.object(CheckinService, "_normalize_history", return_value=[]), \
+                patch.object(CheckinService, "_channel_overview",
+                             side_effect=[(enabled_channel, []), (disabled_channel, [])]):
+            data = service.get_checkin_overview(days=7)
+        self.assertEqual(
+            [item["name"] for item in data["channels"]],
+            ["已启用渠道"],
+            "未启用的签到渠道不应出现在仪表盘概览中",
+        )
+        self.assertEqual(data["summary"]["enabled"], 1, "摘要仍按已启用渠道计数")
 
 
 if __name__ == "__main__":

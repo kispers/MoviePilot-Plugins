@@ -19,6 +19,15 @@ def extract_ed2k_filename(url: str) -> str:
     return ""
 
 
+def candidate_progress(processed: int, total: int, *, start: int, span: int) -> int:
+    """候选校验进度：按全局已完成候选线性推进。"""
+    processed = max(0, int(processed or 0))
+    total = max(processed, int(total or 0))
+    if total <= 0:
+        return start
+    return start + min(span, int(processed / total * span))
+
+
 # 洗版旧文件备份命名：<原名>-<10 位任务短ID><后缀>
 _UPGRADE_BACKUP_RE = re.compile(r"-[A-Za-z0-9]{10}\.[A-Za-z0-9]+$")
 

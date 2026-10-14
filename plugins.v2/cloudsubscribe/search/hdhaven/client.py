@@ -8,8 +8,8 @@ from urllib.parse import urljoin
 from app.log import logger
 
 from .security import HDHavenTurnstile
-from ..cloudflare import is_cloudflare_challenge
-from ..http_client import (
+from ...utils.cloudflare import is_cloudflare_challenge
+from ...utils.http_client import (
     RequestGate,
     RequestGateCancelled,
     RequestGateCooldown,

@@ -19,7 +19,6 @@ from .web import (
     valid_share_url,
 )
 from ..budget import PointBudgetLedger
-from ..http_client import RequestGateCooldown
 from ..types import (
     PREVIEW_PROVIDER_KEYS,
     normalize_resource_type,
@@ -31,6 +30,7 @@ from ...core import OwnerDelegator, SearchQuery, format_search_label
 from ...core.media import tmdb_id_of
 from ...utils.cache import create_platform_ttl_cache
 from ...utils.cache import normalize_platform_cache_key
+from ...utils.http_client import RequestGateCooldown
 
 
 class HDHiveSearchService(OwnerDelegator):

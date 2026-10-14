@@ -5,7 +5,7 @@ from typing import Any, Dict, Iterable, List
 
 from app.log import logger
 
-from .client import OnlineDocumentClient, is_online_document_url
+from .client import OnlineDocsClient, is_online_document_url
 from ..magnet import clear_cache
 from ..types import SUPPORTED_RESOURCE_TYPES, normalize_resource_type
 from ...core.search import SearchQuery, format_search_log_prefix
@@ -14,7 +14,7 @@ from ...core.search import SearchQuery, format_search_log_prefix
 class OnlineDocumentSearchService:
     _CONTEXT_WINDOW = 8000
 
-    def __init__(self, client: OnlineDocumentClient):
+    def __init__(self, client: OnlineDocsClient):
         self._client = client
         self._documents = self._normalize_documents(
             client.documents, client.resource_types
@@ -78,7 +78,7 @@ class OnlineDocumentSearchService:
         return [item for _, _, item in ranked]
 
     def search(self, query: SearchQuery) -> List[Dict[str, Any]]:
-        prefix = format_search_log_prefix(query, "online_docs")
+        prefix = format_search_log_prefix(query, "onlinedocs")
         titles = []
         for value in (
                 getattr(query.mediainfo, "title", ""),

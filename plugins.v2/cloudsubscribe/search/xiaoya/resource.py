@@ -178,7 +178,7 @@ class XiaoyaResourceService:
                     loaded.sort(key=lambda item: len(item[0]), reverse=True)
                     self._share_cache = loaded
             except Exception as error:
-                warning(f"小雅加载网盘分享映射缓存异常：{error}")
+                logger.warning(f"小雅加载网盘分享映射缓存异常：{error}")
 
     def resolve_share(self, path: str) -> Optional[Dict[str, str]]:
         """按路径最长前缀反解网盘类型与真实分享链接。"""

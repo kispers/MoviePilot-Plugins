@@ -21,7 +21,7 @@ class XiaoyaSourceDefinition(SearchSourceDefinition):
     name = "小雅"
     icon = "mdi-folder-play-outline"
     color = "deep-purple"
-    order = 35
+    order = 50
 
     @classmethod
     def _resolve_data_dir(cls, context: Optional[Dict[str, Any]]) -> Path:

@@ -40,11 +40,12 @@ class JuyingResourceService:
         cache_namespace = str(
             getattr(client, "cache_namespace", "") or ""
         ).strip()
-        cache_identity = (
-            f"{cache_namespace or f'instance:{id(client)}'}|"
-            f"{getattr(client, 'base_url', '')}|"
-            f"{str(getattr(client, 'username', '') or '').strip().casefold()}"
-        )
+        if not cache_namespace:
+            cache_namespace = (
+                f"account:{getattr(client, 'base_url', '')}|"
+                f"{str(getattr(client, 'username', '') or '').strip().casefold()}"
+            )
+        cache_identity = cache_namespace
         self._search_cache = create_platform_ttl_cache(
             "juying:search", cache_identity, maxsize=128, ttl=15 * 60
         )
@@ -53,7 +54,7 @@ class JuyingResourceService:
         )
         self._resource_context = create_platform_ttl_cache(
             "juying:resource_context", cache_identity,
-            maxsize=1024, ttl=15 * 60,
+            maxsize=1024, ttl=6 * 3600,
         )
 
     @staticmethod

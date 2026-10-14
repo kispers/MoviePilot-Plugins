@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Optional
 
 from app.log import logger
 
-from ..http_client import (
+from ...utils.http_client import (
     RequestGate,
     gated_idempotent_request,
     gated_request,

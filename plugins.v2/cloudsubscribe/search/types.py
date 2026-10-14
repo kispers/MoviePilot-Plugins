@@ -96,6 +96,7 @@ _TYPE_TEXT_MARKERS = {
     "tianyi": ("天翼", "cloud.189.cn"),
     "yun139": ("移动云盘", "中国移动云盘", "yun.139.com", "139云盘"),
     "alipan": ("阿里云盘", "阿里网盘", "alipan", "aliyundrive"),
+    "xunlei": ("迅雷", "xunlei"),
     "ed2k": ("ed2k://", "电驴"),
     "magnet": ("magnet:?", "磁力"),
 }

@@ -7,15 +7,15 @@ from urllib.parse import quote, unquote
 from app.log import logger
 
 from .security import UIndexSecurity, UIndexSecurityError
-from ..http_client import (
+from ..magnet import _HASH_REGEX, _MAGNET_REGEX, parse_size_str
+from ...utils.cache import create_platform_ttl_cache
+from ...utils.http_client import (
     RequestGate,
     gated_idempotent_request,
     normalize_proxies,
     request_error_summary,
     requests,
 )
-from ..magnet import _HASH_REGEX, _MAGNET_REGEX, parse_size_str
-from ...utils.cache import create_platform_ttl_cache
 
 
 class UIndexError(RuntimeError):
@@ -127,14 +127,10 @@ class UIndexClient:
                 timeout=self.timeout,
             )
         except requests.exceptions.RequestException as error:
-            logger.debug(
-                f"UIndex 直连请求异常：{request_error_summary(error)}，准备尝试浏览器渲染"
-            )
+            logger.debug(f"UIndex 直连异常：{request_error_summary(error)}")
             request_error = error
 
-        # 2. 仅在命中 Cloudflare 盾或直连异常时，才按需调起公共反盾浏览器
-        if request_error is not None or self._security.is_challenge(response):
-            logger.debug(f"UIndex 检测到 Cloudflare 盾防护，按需调用 CloakBrowser 浏览器过盾渲染：{keyword}")
+        # 仅在命中 Cloudflare 盾或直连异常时，才按需调起公共反盾浏览器
         try:
             page_html = self._security.resolve_page(url, response, request_error)
         except UIndexSecurityError as error:

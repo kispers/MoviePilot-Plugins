@@ -157,6 +157,8 @@ class UIConfig:
             "search_proxy": "",
             "search_proxy_username": "",
             "search_proxy_password": "",
+            "cf_solver_url": "",
+            "cf_solver_key": "",
             "search_cache_enabled": True,
             "search_cache_ttl_minutes": 30,
             "search_concurrency": 2,
@@ -377,6 +379,9 @@ class UIConfig:
         if not str(target.get("auto_subscribe_username") or "").strip():
             target["auto_subscribe_username"] = DEFAULT_AUTO_SUBSCRIBE_USERNAME
 
+        target["cf_solver_url"] = str(target.get("cf_solver_url") or "").strip().rstrip("/")
+        target["cf_solver_key"] = str(target.get("cf_solver_key") or "").strip()
+
         year_keys = [
             "auto_subscribe_douban_min_year",
             "auto_subscribe_maoyan_min_year",
@@ -455,22 +460,28 @@ class UIConfig:
         if not str(target.get("cross_transfer_download_path") or "").strip():
             target["cross_transfer_download_path"] = "/tmp"
 
-        online_docs = target.get("online_docs")
-        if not isinstance(online_docs, list) or not online_docs:
+        documents = target.get("onlinedocs")
+        if not isinstance(documents, list) or not documents:
+            # 兼容旧键名：online_docs / online_docs_urls / online_docs_resource_types
+            documents = target.get("online_docs")
+        if not isinstance(documents, list) or not documents:
             legacy_urls = target.get("online_docs_urls") or []
             if isinstance(legacy_urls, str):
                 legacy_urls = [u.strip() for u in re.split(r"[,，\n]+", legacy_urls) if u.strip()]
             legacy_types = target.get("online_docs_resource_types") or []
             if not isinstance(legacy_types, list):
                 legacy_types = []
-            target["online_docs"] = [
+            documents = [
                 {"url": url, "resource_types": list(legacy_types)}
                 for url in legacy_urls if url
             ]
-        if not target["online_docs"]:
-            target["online_docs"].append({"url": "", "resource_types": []})
-        target["online_docs_urls"] = []
-        target["online_docs_resource_types"] = []
+        if not documents:
+            documents.append({"url": "", "resource_types": []})
+        target["onlinedocs"] = documents
+        for legacy_key in (
+                "online_docs", "online_docs_urls", "online_docs_resource_types"
+        ):
+            target.pop(legacy_key, None)
 
         for key in list(target.keys()):
             if key == "search_source_order" or key.endswith(

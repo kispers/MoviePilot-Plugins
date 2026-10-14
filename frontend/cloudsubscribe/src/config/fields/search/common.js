@@ -58,6 +58,27 @@ export function createCommonSearchGroups(resourceTypeItems, sourceItems = []) {
     },
     {
       tab: "common",
+      title: "Cloudflare 过盾服务",
+      icon: "mdi-shield-check",
+      fields: [
+        {
+          key: "cf_solver_url",
+          label: "外部求解服务地址",
+          hint: "填写 Turnstile 求解网关2captcha或FlareSolverr等兼容服务地址",
+          placeholder: "https://2captcha.com/in.php",
+          cols: 12,
+        },
+        {
+          key: "cf_solver_key",
+          label: "求解服务令牌",
+          type: "password",
+          hint: "求解网关的 API Key，FlareSolverr / Byparr 无鉴权可留空",
+          cols: 12,
+        },
+      ],
+    },
+    {
+      tab: "common",
       title: "搜索性能",
       icon: "mdi-speedometer",
       fields: [

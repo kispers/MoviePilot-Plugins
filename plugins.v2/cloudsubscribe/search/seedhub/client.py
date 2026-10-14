@@ -9,10 +9,10 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, quote, urljoin, urlparse
 
 from .security import SeedHubSecurity
-from ..http_client import RequestGate, normalize_proxies
 from ..matching import extract_year
 from ..types import resource_type_from_url
 from ...utils.cache import create_platform_ttl_cache
+from ...utils.http_client import RequestGate, normalize_proxies
 
 
 class SeedHubError(RuntimeError):

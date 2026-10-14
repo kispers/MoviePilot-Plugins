@@ -12,13 +12,13 @@ from ...core.definitions import FieldSpec, GroupSpec, SearchSourceDefinition
 
 
 class PiankuSourceDefinition(SearchSourceDefinition):
-    """片库 (4k.pianku.online) 搜索渠道规范。"""
+    """片库搜索渠道规范。"""
 
     id = "pianku"
     name = "片库"
     icon = "mdi-library-shelves"
     color = "deep-orange"
-    order = 95
+    order = 42
 
     #: 片库资源列表需要过盾与流式渲染，解析节奏由插件内部统一约束，不再暴露给用户。
     DETAIL_LIMIT = 3

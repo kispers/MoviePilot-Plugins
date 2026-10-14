@@ -129,6 +129,30 @@ def normalize_search_candidate(
     return result
 
 
+def build_resolve_kwargs(candidate: Mapping[str, Any]) -> Dict[str, Any]:
+    """候选字典 → RESOURCE_RESOLVE 入参（预览与转存共用）。"""
+    row = dict(candidate or {})
+    provider_data = row.get("provider_data")
+    provider_data = dict(provider_data) if isinstance(provider_data, Mapping) else {}
+    reference = str(row.get("resource_ref") or "").strip()
+    return {
+        "resource_id": str(
+            provider_data.get("resource_id") or row.get("resource_id") or reference
+        ).strip(),
+        "token": str(provider_data.get("token") or reference).strip(),
+        "password": str(
+            provider_data.get("password") or row.get("password") or ""
+        ).strip(),
+        "resource_type": str(row.get("resource_type") or "").strip(),
+        "kind": str(provider_data.get("kind") or "").strip(),
+        "seed_id": str(provider_data.get("seed_id") or "").strip(),
+        "path": str(provider_data.get("path") or "").strip(),
+        "host": str(provider_data.get("host") or "").strip(),
+        "title": str(row.get("title") or "").strip(),
+        "provider_data": provider_data,
+    }
+
+
 @dataclass(frozen=True)
 class SearchQuery:
     """渠道搜索统一输入；来源私有参数由适配器从上下文读取。"""
@@ -334,9 +358,17 @@ class SearchProvider:
     def unlock(
             self, candidate: Mapping[str, Any], search_label: str = ""
     ) -> Any:
-        return self.require(SearchCapability.RESOURCE_UNLOCK).unlock(
-            candidate, search_label=search_label
-        )
+        if self.supports(SearchCapability.RESOURCE_UNLOCK):
+            return self.require(SearchCapability.RESOURCE_UNLOCK).unlock(
+                candidate, search_label=search_label
+            )
+        # 延迟解析渠道：失败按"无链接"跳过，不中断订阅。
+        try:
+            row = self.resolve(**build_resolve_kwargs(candidate))
+        except Exception as error:
+            logger.warning(f"{self.name}资源解析失败，跳过该候选：{error}")
+            return ""
+        return row.get("url") or ""
 
     def clear_cache(self) -> Any:
         return self.require(SearchCapability.CACHE_MAINTENANCE).clear_cache()

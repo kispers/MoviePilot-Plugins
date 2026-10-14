@@ -12,8 +12,8 @@ import time
 from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlparse
 
-from ..cloudflare import browser_proxy, is_cloudflare_challenge, playwright_snapshot
-from ..http_client import RequestGate, gated_request, requests
+from ...utils.cloudflare import browser_proxy, is_cloudflare_challenge, playwright_snapshot
+from ...utils.http_client import RequestGate, gated_request, requests
 
 
 class SeedHubSecurity:

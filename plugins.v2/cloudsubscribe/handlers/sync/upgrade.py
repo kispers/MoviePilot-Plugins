@@ -491,6 +491,10 @@ class UpgradeService(OwnerDelegator):
                         pending_episodes,
                         require_media_match=is_cross_batch,
                     )
+                    upgrade_skip_episodes: List[int] = []
+                    upgrade_skip_reason = ""
+                    upgrade_prepared = self._prepare_share_files(share_files)
+                    upgrade_parsed_cache: Dict[int, Any] = {}
                     for episode in pending_episodes:
                         matched_file, cand_pri = matched_files.get(
                             episode, (None, 0)
@@ -518,9 +522,8 @@ class UpgradeService(OwnerDelegator):
                             suppress_when_unparsed=has_unparsed,
                         )
                         if not should_upgrade:
-                            logger.debug(
-                                f"{upgrade_log_prefix} E{episode:02d} 洗版候选跳过：{reason}"
-                            )
+                            upgrade_skip_episodes.append(episode)
+                            upgrade_skip_reason = reason
                             continue
 
                         logger.debug(
@@ -589,8 +592,21 @@ class UpgradeService(OwnerDelegator):
                                 matched_file,
                                 season=season,
                                 episode=episode,
+                                prepared=upgrade_prepared,
+                                parsed_cache=upgrade_parsed_cache,
                             ),
                         })
+
+                    if upgrade_skip_episodes:
+                        episodes_text = ", ".join(
+                            str(value) for value in upgrade_skip_episodes[:20]
+                        )
+                        if len(upgrade_skip_episodes) > 20:
+                            episodes_text += f", …(+{len(upgrade_skip_episodes) - 20})"
+                        logger.debug(
+                            f"{upgrade_log_prefix} 洗版候选跳过 "
+                            f"[{episodes_text}]：{upgrade_skip_reason}"
+                        )
 
                     if not matched_items:
                         continue

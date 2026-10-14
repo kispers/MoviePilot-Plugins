@@ -28,7 +28,6 @@ from ...core.media import is_subscribe_best_version, tmdb_id_of
 from ...search.dian115 import Dian115SearchService
 from ...search.hdhaven import HDHavenSearchService
 from ...search.hdhive import HDHiveSearchService
-from ...search.http_client import RequestGateCooldown
 from ...search.matching import is_anime_media, positive_ints
 from ...search.mikan.service import filter_fansubs
 from ...search.pansou import PanSouSearchService
@@ -36,6 +35,7 @@ from ...search.registry import create_search_registry
 from ...search.scanner import SearchSourceRegistry
 from ...search.types import normalize_resource_type
 from ...utils.cache import create_platform_ttl_cache
+from ...utils.http_client import RequestGateCooldown
 
 _COMPONENT_TYPES = (
     HDHiveSearchService,
@@ -418,11 +418,25 @@ class SearchHandler:
             for provider in self._providers_with(SearchCapability.POINT_BUDGET)
         }
 
+    def can_unlock(self, source: str) -> bool:
+        """渠道能否把未解锁资源换成真实链接。"""
+        return self.supports(
+            source, SearchCapability.RESOURCE_UNLOCK
+        ) or self.supports(source, SearchCapability.RESOURCE_RESOLVE)
+
     def has_unlock_budget(self, source: str, points: Any) -> bool:
         provider = self._search_registry.get(source)
-        return bool(provider.require(
-            SearchCapability.POINT_BUDGET
-        ).has_budget(points))
+        if provider is None:
+            return False
+        if provider.supports(SearchCapability.POINT_BUDGET):
+            return bool(provider.require(
+                SearchCapability.POINT_BUDGET
+            ).has_budget(points))
+        # 非积分渠道只放行零积分资源。
+        try:
+            return int(points or 0) <= 0
+        except (TypeError, ValueError):
+            return False
 
     def source_name(self, source: str) -> str:
         return self.get_source_display_name(source)

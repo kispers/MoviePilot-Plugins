@@ -17,7 +17,6 @@ from app.plugins import _PluginBase
 from app.schemas.types import ChainEventType, EventType, NotificationType
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
 
 from .core import (
     CloudDriveManager,
@@ -54,11 +53,6 @@ from .core.storage import CloudSubscribeDataStore
 from .core.subscribe import AutoSubscribeService
 from .drive.scanner import DriverRegistry
 from .handlers import SearchHandler, SyncHandler, SubscribeHandler, WebhookHandler
-from .search.cloudflare import (
-    close_cloudflare_solver,
-    close_idle_cloudflare_solver,
-    reap_stale_challenge_browsers,
-)
 from .search.scanner import SearchSourceRegistry
 from .subscribe import (  # noqa: F401 - 导入即注册自动订阅渠道
     create_anilist_provider,
@@ -70,6 +64,12 @@ from .subscribe import (  # noqa: F401 - 导入即注册自动订阅渠道
     create_tmdb_provider,
 )
 from .utils import configure_magnet_metadata_url
+from .utils.cloudflare import (
+    cf_solver_endpoint,
+    cf_solver_key,
+    close_cloudflare_solver,
+    configure_cf_solver,
+)
 from .utils.file_parser import MediaFileParser
 from .utils.http_client import build_proxy_url, validate_proxy_address
 
@@ -122,7 +122,6 @@ class CloudSubscribe(_PluginBase):
     # 私有变量
     _scheduler: Optional[BackgroundScheduler] = None
     _offline_scheduler: Optional[BackgroundScheduler] = None
-    _browser_reaper_scheduler: Optional[BackgroundScheduler] = None
     _offline_scheduler_lock: RLock = RLock()
     _offline_monitor_lock: RLock = RLock()
     # 配置属性
@@ -620,7 +619,6 @@ class CloudSubscribe(_PluginBase):
         action = "插件初始化" if reset_runtime else "插件配置已应用"
         self._applied_config = copy.deepcopy(config)
         self._sync_strm_proxy_server()
-        self._start_challenge_browser_reaper()
         from app.core.plugin import PluginManager
         PluginManager().clear_plugin_agent_tools_cache()
         logger.info(
@@ -754,6 +752,19 @@ class CloudSubscribe(_PluginBase):
             logger.error(f"搜索渠道代理配置无效，本次使用直连：{error}")
             self._search_proxy_address = raw_search_proxy
             self._search_proxy = ""
+
+        configured_cf_solver = str(config.get("cf_solver_url", "") or "").strip()
+        configured_cf_solver_key = str(config.get("cf_solver_key", "") or "").strip()
+        try:
+            configure_cf_solver(configured_cf_solver, configured_cf_solver_key)
+        except ValueError as error:
+            logger.error(f"外部过盾服务地址无效，本次停用：{error}")
+            configure_cf_solver("")
+        if configured_cf_solver:
+            logger.info(
+                f"外部 Cloudflare 求解服务：{cf_solver_endpoint()}"
+                f"（令牌={'已配置' if cf_solver_key() else '未配置'}）"
+            )
 
         configured_resource_order = config.get("resource_type_order", ["115", "ed2k"])
         if not isinstance(configured_resource_order, list):
@@ -990,35 +1001,6 @@ class CloudSubscribe(_PluginBase):
         except Exception as error:
             logger.error(f"榜单自动订阅立即执行失败：{error}")
 
-    def _start_challenge_browser_reaper(self) -> None:
-        """启动反盾浏览器回收定时任务（每 10 分钟一次，幂等）。"""
-        try:
-            scheduler = self._browser_reaper_scheduler
-            if scheduler and scheduler.running:
-                return
-            scheduler = BackgroundScheduler(timezone=settings.TZ)
-            scheduler.add_job(
-                func=self._reclaim_challenge_browsers,
-                trigger=IntervalTrigger(minutes=10),
-                id="CloudSubscribe_ChallengeBrowserReaper",
-                max_instances=1,
-                coalesce=True,
-                replace_existing=True,
-            )
-            scheduler.start()
-            self._browser_reaper_scheduler = scheduler
-        except Exception as error:
-            logger.debug(f"启动反盾浏览器回收任务失败：{error}")
-
-    def _reclaim_challenge_browsers(self) -> None:
-        """回收反盾浏览器：释放空闲会话，兜底清理热重载残留的 Chromium 进程。"""
-        try:
-            if close_idle_cloudflare_solver():
-                logger.debug("已释放空闲的反盾浏览器会话")
-            reap_stale_challenge_browsers()
-        except Exception as error:
-            logger.debug(f"回收反盾浏览器异常：{error}")
-
     def stop_service(self, preserve_subscribe_queue: bool = False):
         """停止服务"""
         self._stop_strm_proxy_server()
@@ -1085,7 +1067,8 @@ class CloudSubscribe(_PluginBase):
             if self._scheduler:
                 self._scheduler.remove_all_jobs()
                 if self._scheduler.running:
-                    self._scheduler.shutdown()
+                    # wait=True 会卡住热重载与优雅停机。
+                    self._scheduler.shutdown(wait=False)
                 self._scheduler = None
         except Exception:
             pass
@@ -1094,7 +1077,7 @@ class CloudSubscribe(_PluginBase):
             if self._offline_scheduler:
                 self._offline_scheduler.remove_all_jobs()
                 if self._offline_scheduler.running:
-                    self._offline_scheduler.shutdown()
+                    self._offline_scheduler.shutdown(wait=False)
                 self._offline_scheduler = None
         except Exception:
             pass
@@ -1103,15 +1086,6 @@ class CloudSubscribe(_PluginBase):
             close_cloudflare_solver()
         except Exception as error:
             logger.debug(f"关闭反盾浏览器会话失败：{error}")
-
-        try:
-            if self._browser_reaper_scheduler:
-                self._browser_reaper_scheduler.remove_all_jobs()
-                if self._browser_reaper_scheduler.running:
-                    self._browser_reaper_scheduler.shutdown()
-                self._browser_reaper_scheduler = None
-        except Exception:
-            pass
 
         try:
             store = self.__dict__.get("_cloudsubscribe_data_store")

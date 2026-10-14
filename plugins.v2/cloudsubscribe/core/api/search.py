@@ -13,7 +13,7 @@ from app.schemas.types import MediaType
 from app.utils.string import StringUtils
 
 from .page import _platform_image_url, clear_ui_options_cache
-from .. import OwnerDelegator, SearchCapability
+from .. import OwnerDelegator, SearchCapability, build_resolve_kwargs
 from ..config import UIConfig
 from ..media import apply_media_identity, recognize_media, search_medias
 from ...handlers.search import SearchHandler
@@ -259,18 +259,13 @@ class SearchApi(OwnerDelegator):
                     self._test_search_config(source, payload.get("config")),
                 )
                 try:
-                    resolve_args = {
-                        "resource_id": juying_resource_id or str(provider_data.get("resource_id") or resource_ref).strip(),
-                        "token": str(provider_data.get("token") or resource_ref),
-                        "password": str(provider_data.get("password") or ""),
-                        "resource_type": resource_type,
-                        "kind": str(provider_data.get("kind") or ""),
-                        "seed_id": str(provider_data.get("seed_id") or ""),
-                        "path": str(provider_data.get("path") or ""),
-                        "host": str(provider_data.get("host") or ""),
-                    }
                     resolved = handler.resolve_source_resource(
-                        source, **resolve_args
+                        source,
+                        **build_resolve_kwargs({
+                            "resource_ref": resource_ref,
+                            "resource_type": resource_type,
+                            "provider_data": provider_data,
+                        }),
                     )
                 finally:
                     handler.close(release_cache=False)

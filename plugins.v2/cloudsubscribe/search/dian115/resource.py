@@ -72,9 +72,11 @@ class Dian115ResourceService:
             return payload
 
         def log_cache_hit(waited: bool = False) -> None:
-            stage = "等待后" if waited else ""
+            # 仅"等待后命中"值得记录：普通命中属实现细节，避免每条详情刷一行。
+            if not waited:
+                return
             logger.debug(
-                f"Dian115 详情{stage}命中缓存：tmdb={normalized_id}，"
+                f"Dian115 详情等待后命中缓存：tmdb={normalized_id}，"
                 f"type={normalized_type}，season={normalized_season}"
             )
 

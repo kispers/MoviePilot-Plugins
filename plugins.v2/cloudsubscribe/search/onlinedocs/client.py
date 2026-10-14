@@ -11,11 +11,11 @@ from urllib.parse import urlparse
 import unicodedata
 from app.log import logger
 
-from ..http_client import (
+from ..types import resource_type_from_url
+from ...utils.http_client import (
     normalize_proxies,
     requests,
 )
-from ..types import resource_type_from_url
 
 _DOC_HOSTS = {"kdocs.cn", "www.kdocs.cn", "docs.qq.com", "docs.weixin.qq.com"}
 _URL_RE = re.compile(
@@ -483,7 +483,7 @@ def parse_online_document(url: str, proxy: Any = None, timeout: int = 30) -> Dic
         return {"url": url, "text": "", "links": [], "error": str(error)}
 
 
-class OnlineDocumentClient:
+class OnlineDocsClient:
     """读取公开在线文档的轻量协议客户端。"""
 
     def __init__(self, documents=None, resource_types=None, proxy=None, timeout=30):

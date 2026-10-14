@@ -7,7 +7,7 @@ from app.schemas import MediaInfo
 from app.schemas.types import MediaType
 from app.utils.string import StringUtils
 
-from .utils import normalize_season
+from .utils import candidate_progress, normalize_season
 from ...core import OwnerDelegator
 
 
@@ -277,6 +277,12 @@ class TelevisionSyncProcessor(OwnerDelegator):
             search_label = self._search_handler._search_label(
                 mediainfo, MediaType.TV, season
             )
+            #: 候选进度按全局推进。
+            total_candidates = sum(
+                len(resources) for _, resources, _ in resource_batches
+            )
+            processed_candidates = 0
+
             for source_index, (source, candidate_resources, is_cross_batch) in enumerate(
                     resource_batches
             ):
@@ -297,7 +303,9 @@ class TelevisionSyncProcessor(OwnerDelegator):
                     subscribe,
                     f"处理 {source.upper()} "
                     f"{'跨盘' if is_cross_batch else '目标网盘'}候选",
-                    55 + int((source_index + 1) / len(resource_batches) * 15),
+                    candidate_progress(
+                        processed_candidates, total_candidates, start=65, span=23
+                    ),
                 )
 
                 logger.info(
@@ -309,10 +317,14 @@ class TelevisionSyncProcessor(OwnerDelegator):
                 for resource_index, resource in enumerate(candidate_resources):
                     if self._stop_requested():
                         break
+                    processed_candidates += 1
                     self._set_task_phase(
                         subscribe,
-                        f"校验候选资源 ({resource_index + 1}/{len(candidate_resources)})",
-                        72 + int((resource_index + 1) / len(candidate_resources) * 16),
+                        f"校验候选资源 ({processed_candidates}/"
+                        f"{max(total_candidates, processed_candidates)})",
+                        candidate_progress(
+                            processed_candidates, total_candidates, start=65, span=23
+                        ),
                     )
 
                     share_url = resource.get("url", "")
@@ -510,11 +522,6 @@ class TelevisionSyncProcessor(OwnerDelegator):
                             if discover_manual_episodes
                             else missing_episode_set & share_episodes
                         )
-                        absent_episode_numbers = (
-                            set()
-                            if discover_manual_episodes
-                            else missing_episode_set - share_episodes
-                        )
                         logger.debug(
                             f"{resource_input_label}实际包含 {video_count} 个视频，"
                             f"S{season:02d} 可识别集数："
@@ -532,14 +539,10 @@ class TelevisionSyncProcessor(OwnerDelegator):
                                 f"S{season:02d}，已跳过该资源"
                             )
                             continue
-                        if absent_episode_numbers:
-                            logger.debug(
-                                f"{resource_input_label}未包含当前缺失集数："
-                                f"{self._format_episode_ranges(absent_episode_numbers)}"
-                            )
-
                         # 收集该分享中所有匹配的文件
                         matched_items = []
+                        telev_prepared = self._prepare_share_files(share_files)
+                        telev_parsed_cache: Dict[int, Any] = {}
                         episodes_to_match = (
                             sorted(matched_episode_numbers)
                             if discover_manual_episodes
@@ -596,6 +599,8 @@ class TelevisionSyncProcessor(OwnerDelegator):
                                         matched_file,
                                         season=season,
                                         episode=episode,
+                                        prepared=telev_prepared,
+                                        parsed_cache=telev_parsed_cache,
                                     ),
                                 })
 
@@ -605,10 +610,6 @@ class TelevisionSyncProcessor(OwnerDelegator):
                                 f"{StringUtils.format_ep([ep for ep, _ in matched_pairs])}"
                             )
                         if not matched_items:
-                            logger.debug(
-                                f"该{resource_input_label}未匹配到 S{season} 的任何缺失剧集，"
-                                "可能是季数不匹配或文件名无法识别"
-                            )
                             continue
 
                         cloud_resource = self._is_cloud_resource_url(share_url)

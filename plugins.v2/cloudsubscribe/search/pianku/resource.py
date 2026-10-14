@@ -1,6 +1,7 @@
 """片库资源列表拉取、候选构造与分享直链解析协议。"""
 
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
 
 from app.log import logger
@@ -25,10 +26,8 @@ from ..types import (
     RESOURCE_TYPE_PRIORITY,
     append_share_password,
     resource_type_from_panel,
-    resource_type_from_url,
 )
 from ...core.search import SearchQuery
-from ...utils.cache import create_platform_ttl_cache
 
 
 class PiankuResourceService:
@@ -36,6 +35,8 @@ class PiankuResourceService:
 
     #: 站点未收录的平台键：只能解析出真实链接后再按链接判定类型。
     _UNKNOWN_PLATFORM = "?"
+    #: 详情页并行拉取度。
+    DETAIL_CONCURRENCY = 2
 
     def __init__(
             self,
@@ -47,10 +48,6 @@ class PiankuResourceService:
         self._result_limit = max(1, int(result_limit or 20))
         self._detail_limit = max(1, int(detail_limit or 3))
         self._lock = threading.RLock()
-        #: 资源身份 -> 已解析真实链接：同一资源在 TTL 内不再重复过盾解析。
-        self._link_identity = create_platform_ttl_cache(
-            "pianku:links", getattr(client, "base_url", ""), maxsize=2048, ttl=6 * 3600
-        )
 
     @classmethod
     def _keywords(cls, mediainfo: Any, media_type: MediaType, season: Optional[int]) -> List[str]:
@@ -106,14 +103,6 @@ class PiankuResourceService:
         """平台键/展示名映射（公共识别）；站点归到 other 的平台返回空并等待链接判定。"""
         return resource_type_from_panel(platform)
 
-    @classmethod
-    def _infer_resource_type(cls, link: str, platform: str = "") -> str:
-        """优先用平台键判定，其次按真实链接（磁力/电驴/网盘域名）判定。"""
-        resource_type = cls._resource_type(platform)
-        if resource_type:
-            return resource_type
-        return resource_type_from_url(link)
-
     def _accepts_title(
             self,
             title: str,
@@ -151,37 +140,44 @@ class PiankuResourceService:
             return append_share_password(resource_type, target, password)
         return target
 
+    @staticmethod
+    def _kind_resource_type(kind: Any) -> str:
+        """SSE 条目的粗分类兜底：``magnet`` 视为磁力，其余交给平台名映射。"""
+        return "magnet" if str(kind or "").strip().lower() == "magnet" else ""
+
     @classmethod
-    def _build_candidate(
-            cls,
-            resource: Dict[str, Any],
-            resource_type: str,
-            link: str,
+    def _build_deferred_candidate(
+            cls, resource: Dict[str, Any], resource_type: str
     ) -> Optional[Dict[str, Any]]:
+        """构造延迟解析候选：真实链接在转存/预览时按需换取。
+
+        框架以 ``need_unlock`` + ``resource_ref`` 标记「可延迟解析」，
+        片库不消耗积分（``unlock_points`` 恒为 0）。
+        """
         title = str(resource.get("title") or "").strip()
-        if not title or not resource_type:
+        href = str(resource.get("href") or "").strip()
+        if not title or not href or not resource_type:
             return None
         password = str(resource.get("password") or "").strip()
-        resolved = cls.build_share_link(link, resource_type, title, password)
-        if not resolved:
-            return None
         candidate: Dict[str, Any] = {
-            "url": resolved,
+            "url": "",
             "title": title,
             "resource_type": resource_type,
             "source": "pianku",
             "source_url": str(resource.get("source_url") or ""),
-            "resource_ref": str(resource.get("href") or ""),
+            "resource_ref": href,
+            "need_unlock": True,
+            "is_unlocked": True,
+            "unlock_points": 0,
             "provider_data": {
-                "resource_id": str(resource.get("href") or ""),
-                "token": str(resource.get("href") or ""),
+                "resource_id": href,
+                "token": href,
                 "platform": str(resource.get("platform") or ""),
+                "kind": str(resource.get("kind") or ""),
                 "password": password,
                 "detail_url": str(resource.get("source_url") or ""),
             },
         }
-        if resource_type == "magnet":
-            candidate["info_hash"] = (extract_magnet_hash(resolved) or "").upper()
         if password:
             candidate["share_password"] = password
         return candidate
@@ -231,41 +227,54 @@ class PiankuResourceService:
             expected_year: str,
             exp_titles: List[str],
     ) -> Dict[str, List[Dict[str, Any]]]:
-        """逐个详情页取资源（必要时过盾），离线预筛后按资源类型分组。"""
+        """并行拉取详情页资源（必要时过盾），预筛后按类型分组。"""
         groups: Dict[str, List[Dict[str, Any]]] = {}
         seen_rows = set()
         # 命中足够候选即停止渲染后续详情页；阈值设上限，避免大 limit 渲染全部详情页
         enough_rows = max(12, min(self._result_limit * 2, 40))
-        for detail in selected:
-            if sum(len(group) for group in groups.values()) >= enough_rows:
-                break
-            try:
-                resources = self._client.fetch_resources(detail.get("id"))
-            except PiankuError as error:
-                logger.warning(f"片库详情 {detail.get('id')} 资源读取失败：{error}")
-                continue
-            for resource in resources:
-                title = str(resource.get("title") or "").strip()
-                if not title:
+        pending = list(selected)
+        enough = False
+        while pending and not enough:
+            batch = pending[:self.DETAIL_CONCURRENCY]
+            pending = pending[self.DETAIL_CONCURRENCY:]
+            with ThreadPoolExecutor(max_workers=len(batch)) as executor:
+                loaded = list(executor.map(self._load_detail, batch))
+            for detail, resources in zip(batch, loaded):
+                if resources is None:
                     continue
-                if not self._accepts_title(
-                        title, media_type, season, expected_year, exp_titles
-                ):
-                    continue
-                # 站点未收录的平台（115/ed2k 等会被归为 other）先按未知占位，
-                # 解析出真实链接后再判定类型，避免直接丢弃。
-                resource_type = (
-                        self._resource_type(resource.get("platform"))
-                        or self._UNKNOWN_PLATFORM
-                )
-                row_key = (resource_type, title, str(resource.get("password") or ""))
-                if row_key in seen_rows:
-                    continue
-                seen_rows.add(row_key)
-                item = dict(resource)
-                item["source_url"] = detail.get("url") or ""
-                groups.setdefault(resource_type, []).append(item)
+                for resource in resources:
+                    title = str(resource.get("title") or "").strip()
+                    if not title:
+                        continue
+                    if not self._accepts_title(
+                            title, media_type, season, expected_year, exp_titles
+                    ):
+                        continue
+                    # 站点未收录的平台（115/ed2k 等会被归为 other）先按未知占位，
+                    # 解析出真实链接后再判定类型，避免直接丢弃。
+                    resource_type = (
+                            self._resource_type(resource.get("platform"))
+                            or self._UNKNOWN_PLATFORM
+                    )
+                    row_key = (resource_type, title, str(resource.get("password") or ""))
+                    if row_key in seen_rows:
+                        continue
+                    seen_rows.add(row_key)
+                    item = dict(resource)
+                    item["source_url"] = detail.get("url") or ""
+                    groups.setdefault(resource_type, []).append(item)
+                if sum(len(group) for group in groups.values()) >= enough_rows:
+                    enough = True
+                    break
         return groups
+
+    def _load_detail(self, detail: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+        """读取单个详情页资源，失败只告警。"""
+        try:
+            return self._client.fetch_resources(detail.get("id"))
+        except PiankuError as error:
+            logger.warning(f"片库详情 {detail.get('id')} 资源读取失败：{error}")
+            return None
 
     def _search_details(self, keywords: List[str]) -> List[Dict[str, Any]]:
         details: List[Dict[str, Any]] = []
@@ -324,66 +333,30 @@ class PiankuResourceService:
             return []
 
         ordered = self._ordered_groups(groups)
-
-        # 片库的 open.php 直链带一次性签名凭证，只在签发它的会话内有效；因此无论
-        # 普通搜索还是网盘资源列表，都必须在同一次会话内解析成真实链接再交付，
-        # 否则调用方拿到的引用会以「资源访问凭证已失效」失败。
-        # 解析预算：每个候选最多消耗 1 次解析，另留 1 次重试余量。
         budget = limit + 1
         plan = self._round_robin([group for _, group in ordered], budget)
 
-        def identity_of(resource: Dict[str, Any]) -> tuple:
-            return (
-                str(resource.get("source_url") or ""),
-                str(resource.get("platform") or ""),
-                str(resource.get("title") or ""),
-                str(resource.get("password") or ""),
-            )
-
-        links: Dict[str, str] = {}
-        pending_hrefs: List[str] = []
-        with self._lock:
-            for resource in plan:
-                identity = identity_of(resource)
-                cached = self._link_identity.get(identity)
-                if cached:
-                    links[str(resource.get("href") or "")] = str(cached)
-                    continue
-                href = str(resource.get("href") or "")
-                if href:
-                    pending_hrefs.append(href)
-        if pending_hrefs:
-            try:
-                # 批量解析：同一次会话内连续请求，避免逐条排队公共门控。
-                links.update(self._client.resolve_links(pending_hrefs))
-            except PiankuError as error:
-                logger.warning(f"片库资源批量解析失败：{error}")
-
         collected: List[Dict[str, Any]] = []
-        seen_urls = set()
+        seen_refs = set()
         for resource in plan:
-            href = str(resource.get("href") or "")
-            link = links.get(href) or ""
-            if not link:
+            href = str(resource.get("href") or "").strip()
+            if not href or href in seen_refs:
                 continue
-            resource_type = self._infer_resource_type(link, resource.get("platform"))
-            candidate = self._build_candidate(
-                resource,
-                resource_type or self._resource_type(resource.get("platform")),
-                link,
+            seen_refs.add(href)
+            resource_type = (
+                    self._resource_type(resource.get("platform"))
+                    or self._kind_resource_type(resource.get("kind"))
             )
+            candidate = self._build_deferred_candidate(resource, resource_type)
             if not candidate:
                 continue
-            dedupe_key = candidate.get("info_hash") or candidate["url"]
-            if dedupe_key in seen_urls:
-                continue
-            seen_urls.add(dedupe_key)
-            with self._lock:
-                self._link_identity[identity_of(resource)] = link
             collected.append(candidate)
             if len(collected) >= limit:
                 break
 
+        self._client.remember_link_session(
+            candidate.get("resource_ref") for candidate in collected
+        )
         return collected
 
     def resolve_resource(
@@ -399,7 +372,7 @@ class PiankuResourceService:
         if not href:
             raise PiankuError("片库资源引用为空")
         with self._lock:
-            link = self._client.resolve_link(href, detail_url)
+            link = self._client.resolve_link(href)
             if not link:
                 raise PiankuError("片库资源链接解析失败（可能需要重新完成人机验证）")
             normalized_type = self._resource_type(resource_type) or str(resource_type or "").strip().lower()

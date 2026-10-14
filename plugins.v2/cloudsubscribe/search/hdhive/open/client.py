@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, Optional
 
 from app.log import logger
 
-from ...http_client import (
+from ....utils.http_client import (
     RequestGate,
     gated_request,
     normalize_proxies,

@@ -4,10 +4,11 @@ import base64
 import time
 from typing import Any, Optional
 
-from ..cloudflare import (
+from ...utils.cloudflare import (
     BrowserPageSession,
     mint_turnstile_token,
     mount_turnstile_page,
+    solve_turnstile_via_api,
 )
 
 _KEY_VERSION = 1
@@ -88,6 +89,14 @@ def turnstile_token(client: Any, action: str, allow_browser: bool = True) -> Opt
     site_key = str(policy.get("turnstile_site_key") or "").strip()
     if not site_key:
         raise client.error_type("Dian115 未返回 Cloudflare site key", code="schema_changed")
+    api_token = solve_turnstile_via_api(
+        f"{client.base_url}/login",
+        site_key,
+        action,
+        timeout=int(getattr(client, "_timeout", 60) or 60),
+    )
+    if api_token:
+        return api_token
     if not allow_browser:
         raise client.error_type(
             "Dian115 登录需要 Cloudflare 验证，请先刷新账户登录状态",

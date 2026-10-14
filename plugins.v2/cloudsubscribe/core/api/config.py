@@ -11,7 +11,11 @@ from .page import clear_ui_options_cache
 from .. import OwnerDelegator
 from ..config import DEFAULT_AUTO_SUBSCRIBE_USERNAME, UIConfig
 from ..services.runtime import sync_lock
-from ...utils.http_client import build_proxy_url, validate_proxy_address
+from ...utils.http_client import (
+    build_proxy_url,
+    normalize_service_url,
+    validate_proxy_address,
+)
 
 
 class ConfigApi(OwnerDelegator):
@@ -50,6 +54,15 @@ class ConfigApi(OwnerDelegator):
         payload["search_proxy"] = normalized
         payload["search_proxy_username"] = username
         payload["search_proxy_password"] = password
+
+    @staticmethod
+    def _validate_cf_solver_config(payload: Dict[str, Any]) -> None:
+        """校验并规范化外部 Cloudflare 求解服务地址与令牌（留空表示停用）。"""
+        try:
+            payload["cf_solver_url"] = normalize_service_url(payload.get("cf_solver_url"))
+        except ValueError as error:
+            raise ValueError(f"外部过盾服务地址无效：{error}") from error
+        payload["cf_solver_key"] = str(payload.get("cf_solver_key") or "").strip()
 
     def _validate_checkin_config(
             self,
@@ -132,6 +145,7 @@ class ConfigApi(OwnerDelegator):
                 return {"success": False, "message": "配置数据格式错误"}
             UIConfig.normalize_config(payload)
             self._validate_search_proxy_config(payload)
+            self._validate_cf_solver_config(payload)
             auto_subscribe_error = self._validate_auto_subscribe_config(payload)
             if auto_subscribe_error:
                 return {"success": False, "message": auto_subscribe_error}

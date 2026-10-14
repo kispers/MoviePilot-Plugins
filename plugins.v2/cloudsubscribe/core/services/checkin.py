@@ -540,7 +540,8 @@ class CheckinService(OwnerDelegator):
                 "retry_count": self._configured_retry_count(),
                 "state": copy.deepcopy(schedule),
             },
-            "channels": channels,
+            # 仪表盘只展示已启用的渠道：未启用的渠道不参与签到，不做显示。
+            "channels": [item for item in channels if item["enabled"]],
         }
 
     def _notify_checkin(

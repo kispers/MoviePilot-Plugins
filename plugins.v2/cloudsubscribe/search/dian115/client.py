@@ -13,8 +13,8 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 from .security import turnstile_token
-from ..cloudflare import is_cloudflare_challenge
-from ..http_client import (
+from ...utils.cloudflare import is_cloudflare_challenge
+from ...utils.http_client import (
     AccountActionGate,
     RequestGate,
     gated_idempotent_request,

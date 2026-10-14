@@ -24,17 +24,17 @@ from .security import (
     needs_action_proof,
     payload_error_message,
 )
-from ...cloudflare import (
+from ....utils.cache import create_platform_ttl_cache
+from ....utils.cloudflare import (
     bypass_cloudflare_session,
     is_cloudflare_response,
 )
-from ...http_client import (
+from ....utils.http_client import (
     RequestGate,
     gated_idempotent_request,
     normalize_proxies,
     requests,
 )
-from ....utils.cache import create_platform_ttl_cache
 
 
 class HDHiveWebError(RuntimeError):

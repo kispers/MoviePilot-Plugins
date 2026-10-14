@@ -5,15 +5,15 @@ import threading
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
-from ..http_client import (
+from ..magnet import build_magnet_url
+from ...utils.cache import create_platform_ttl_cache
+from ...utils.http_client import (
     RequestGate,
     gated_request,
     normalize_proxies,
     normalize_proxy_address,
     requests,
 )
-from ..magnet import build_magnet_url
-from ...utils.cache import create_platform_ttl_cache
 
 
 class PirateBayError(RuntimeError):

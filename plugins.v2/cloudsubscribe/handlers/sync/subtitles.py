@@ -283,6 +283,7 @@ class SubtitleService(OwnerDelegator):
             season: Optional[int],
             episode: Optional[int],
             single_video: bool,
+            parsed_cache: Optional[Dict[str, Any]] = None,
     ) -> bool:
         video_stem = Path(video_name).stem.casefold()
         subtitle_stem = Path(subtitle_name).stem.casefold()
@@ -293,9 +294,23 @@ class SubtitleService(OwnerDelegator):
             if not remainder or remainder[0] in ". _-[":
                 return True
         if season is not None and episode is not None:
-            parsed = MediaFileParser.extract_season_episode(subtitle_name)
+            parsed = parsed_cache.get(subtitle_name) if parsed_cache is not None else None
+            if parsed is None:
+                parsed = MediaFileParser.extract_season_episode(subtitle_name)
+                if parsed_cache is not None:
+                    parsed_cache[subtitle_name] = parsed
             return parsed == (int(season), int(episode))
         return single_video
+
+    @staticmethod
+    def _prepare_share_files(files: List[Dict[str, Any]]) -> tuple:
+        """展平分享文件并统计视频数：同一分享内复用，避免逐集重复遍历。"""
+        flattened = list(MediaFileParser.iter_files(files))
+        video_count = sum(
+            MediaFileParser.is_video(str(item.get("name") or ""))
+            for item in flattened
+        )
+        return flattened, video_count
 
     def _companion_subtitle_files(
             self,
@@ -303,15 +318,13 @@ class SubtitleService(OwnerDelegator):
             video_file: Dict[str, Any],
             season: Optional[int] = None,
             episode: Optional[int] = None,
+            prepared: Optional[tuple] = None,
+            parsed_cache: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         """关联同名字幕；单电影资源允许其唯一视频接收全部字幕。"""
         if not getattr(self, "_organize_subtitles", True):
             return []
-        flattened = list(MediaFileParser.iter_files(files))
-        video_count = sum(
-            MediaFileParser.is_video(str(item.get("name") or ""))
-            for item in flattened
-        )
+        flattened, video_count = prepared or self._prepare_share_files(files)
         video_name = str(video_file.get("name") or "")
         video_cloud_path = str(video_file.get("cloud_path") or "").rstrip("/")
         matched = []
@@ -332,6 +345,7 @@ class SubtitleService(OwnerDelegator):
                     season,
                     episode,
                     single_video=video_count == 1,
+                    parsed_cache=parsed_cache,
             ):
                 continue
             identity = str(item.get("id") or "") or subtitle_name.casefold()

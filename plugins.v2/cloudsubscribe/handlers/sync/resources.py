@@ -14,7 +14,6 @@ from ...core import (
     CloudDriveProvider,
     CloudFile,
     OwnerDelegator,
-    SearchCapability,
 )
 from ...drive.common import format_size
 from ...search.types import (
@@ -632,17 +631,10 @@ class ResourceTransferService(OwnerDelegator):
             unlock_points = 0
         prefix = f"{log_prefix} " if log_prefix else ""
         resource_title = str(resource.get("title") or "").strip()
-        if not (
-                self._search_handler.supports(
-                    source, SearchCapability.RESOURCE_UNLOCK
-                )
-                and self._search_handler.supports(
-            source, SearchCapability.POINT_BUDGET
-        )
-        ):
+        if not self._search_handler.can_unlock(source):
             logger.debug(
                 f"{prefix}跳过 {source.upper()} 资源 {resource_title}："
-                "渠道未声明资源解锁和积分预算能力"
+                "渠道未声明资源解锁或按需解析能力"
             )
             return ""
         has_budget = self._search_handler.has_unlock_budget(

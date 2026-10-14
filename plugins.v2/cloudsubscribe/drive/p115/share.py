@@ -2,6 +2,7 @@
 
 import copy
 import time
+from dataclasses import asdict
 from itertools import islice
 from typing import Any, Dict, List, Tuple
 
@@ -89,9 +90,9 @@ class ShareService(OwnerDelegator):
             return status
 
         cached = self._share_status_cache.get(share_url)
-        if isinstance(cached, ShareLinkStatus):
+        if isinstance(cached, dict):
             logger.debug(f"复用115分享状态缓存：{share_url}")
-            return copy.deepcopy(cached)
+            return ShareLinkStatus(**cached)
 
         if not self.client:
             status.error_message = "客户端未初始化"
@@ -172,7 +173,8 @@ class ShareService(OwnerDelegator):
             logger.error(status.error_message)
 
         if not status.error_message.startswith("检查分享状态异常"):
-            self._share_status_cache[share_url] = copy.deepcopy(status)
+            # 平台缓存走 pickle：只存纯数据，避免热重载后旧类实例无法序列化。
+            self._share_status_cache[share_url] = asdict(status)
             if not status.is_valid:
                 self._discard_share_file_cache(share_url)
         return status

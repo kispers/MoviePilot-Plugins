@@ -7,15 +7,15 @@ from urllib.parse import parse_qs, quote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
-from ..http_client import (
+from ..magnet import build_magnet_url, parse_size_str
+from ..subs_filter import extract_fansub_from_title
+from ...utils.http_client import (
     RequestGate,
     gated_request,
     normalize_proxies,
     request_error_summary,
     requests,
 )
-from ..magnet import build_magnet_url, parse_size_str
-from ..subs_filter import extract_fansub_from_title
 
 
 class MikanClientError(Exception):

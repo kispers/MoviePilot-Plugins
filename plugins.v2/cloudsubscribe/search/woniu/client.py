@@ -11,7 +11,7 @@ from urllib.parse import quote
 from app.log import logger
 from bs4 import BeautifulSoup
 
-from ..http_client import (
+from ...utils.http_client import (
     RequestGate,
     gated_idempotent_request,
     gated_request,
@@ -171,7 +171,7 @@ class WoniuClient:
                 json=json_data,
                 timeout=req_timeout,
             )
-        except requests.HTTPError as error:
+        except requests.exceptions.HTTPError as error:
             status_code = getattr(getattr(error, "response", None), "status_code", 0)
             if status_code in (401, 403):
                 raise WoniuError(f"蜗牛身份验证失败 (HTTP {status_code})", "woniu_auth_failed") from error

@@ -11,6 +11,7 @@ from app.schemas.types import MediaType
 from ...core import OwnerDelegator
 from ...core.media import get_transfer_history_by, media_identity, tmdb_id_of
 from ...drive.common import format_size
+from .utils import candidate_progress
 
 
 class MovieSyncProcessor(OwnerDelegator):
@@ -319,7 +320,7 @@ class MovieSyncProcessor(OwnerDelegator):
                 logger.info(f"未找到电影 {mediainfo.title} 的可处理资源")
                 return transferred_count
 
-            self._set_task_phase(subscribe, "筛选候选资源", 60)
+            self._set_task_phase(subscribe, "筛选候选资源", 65)
             search_label = self._search_handler._search_label(
                 mediainfo, MediaType.MOVIE
             )
@@ -334,13 +335,18 @@ class MovieSyncProcessor(OwnerDelegator):
 
             # 遍历搜索结果，尝试找到并转存电影
             movie_transferred = False
+            total_candidates = max(1, len(candidate_resources))
             for resource_index, resource in enumerate(candidate_resources):
                 if movie_transferred or self._stop_requested():
                     break
+                processed_candidates = resource_index + 1
                 self._set_task_phase(
                     subscribe,
-                    f"校验候选资源 ({resource_index + 1}/{len(candidate_resources)})",
-                    60 + int((resource_index + 1) / len(candidate_resources) * 22),
+                    f"校验候选资源 ({processed_candidates}/"
+                    f"{max(total_candidates, processed_candidates)})",
+                    candidate_progress(
+                        processed_candidates, total_candidates, start=65, span=20
+                    ),
                 )
 
                 share_url = resource.get("url", "")

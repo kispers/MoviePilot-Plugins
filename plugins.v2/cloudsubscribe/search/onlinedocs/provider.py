@@ -2,20 +2,20 @@
 
 from typing import Any, Iterable
 
+from .service import OnlineDocumentSearchService
 from ...core.search import (
     SearchCapability,
     SearchProvider,
 )
-from .service import OnlineDocumentSearchService
 
 
-def create_online_docs_provider(
+def create_onlinedocs_provider(
         client: Any,
         resource_types: Iterable[str],
 ) -> SearchProvider:
     service = OnlineDocumentSearchService(client)
     return SearchProvider(
-        key="online_docs",
+        key="onlinedocs",
         name="在线文档",
         resource_types=frozenset(resource_types),
         services={
