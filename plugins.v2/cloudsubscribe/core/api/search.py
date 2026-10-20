@@ -13,7 +13,7 @@ from app.schemas.types import MediaType
 from app.utils.string import StringUtils
 
 from .page import _platform_image_url, clear_ui_options_cache
-from .. import OwnerDelegator, SearchCapability, build_resolve_kwargs
+from .. import CloudDriveCapability, OwnerDelegator, SearchCapability, build_resolve_kwargs
 from ..config import UIConfig
 from ..media import apply_media_identity, recognize_media, search_medias
 from ...handlers.search import SearchHandler
@@ -201,7 +201,6 @@ class SearchApi(OwnerDelegator):
         resource_type = normalize_resource_type(payload.get("resource_type"))
         url = str(payload.get("url") or "").strip()
         resource_ref = str(payload.get("resource_ref") or "").strip()
-        is_unlocked = bool(payload.get("is_unlocked"))
         parent_id = str(payload.get("parent_id") or "").strip()
         keyword = str(payload.get("keyword") or "").strip()
         raw_file_list = payload.get("file_list") or provider_data.get("file_list") or []
@@ -1191,20 +1190,19 @@ class SearchApi(OwnerDelegator):
             )
         ]
 
-        # 构造当前系统可用且支持的目标网盘列表供跨盘转存选择
+        # 只暴露同时支持本地写入与文件查询的网盘，避免前端提供不可用的跨盘目标。
         available_drives = []
         registry = getattr(self, "_cloud_drive_registry", None)
         if registry:
             for drive in registry.available():
-                if getattr(drive, "key", "") not in {"baidu", "xunlei"}:
+                if (
+                        drive.supports(CloudDriveCapability.LOCAL_UPLOAD)
+                        and drive.supports(CloudDriveCapability.FILE_QUERY)
+                ):
                     available_drives.append({
                         "key": drive.key,
                         "name": drive.name,
                     })
-        if not available_drives:
-            main_key = getattr(getattr(self, "_cloud_drive", None), "key", "115")
-            main_name = getattr(getattr(self, "_cloud_drive", None), "name", "115网盘")
-            available_drives.append({"key": main_key, "name": main_name})
 
         return {
             "success": True,

@@ -48,6 +48,10 @@ class CloudDriveManager:
         except KeyError:
             logger.warning(f"网盘提供方 {cloud_key or '<empty>'} 未就绪，请检查对应账号配置")
 
+        self._plugin._cloud_drive_resource_types = (
+            frozenset(self.active_drive.resource_types)
+            if self.active_drive else frozenset()
+        )
         self._filter_supported_resource_types()
 
     def _persist_config(self, **updates: Any) -> None:
@@ -102,6 +106,9 @@ class CloudDriveManager:
                     if getattr(self._plugin, "_cloud_drive_key", "") == key:
                         self.active_drive = provider
                         self._plugin._cloud_drive = provider
+                        self._plugin._cloud_drive_resource_types = frozenset(
+                            provider.resource_types
+                        )
                     return True
         except Exception as err:
             logger.warning(f"注册驱动 {key} 失败：{err}")

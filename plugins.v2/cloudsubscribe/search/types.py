@@ -4,54 +4,107 @@ import re
 from typing import Any, Dict, Mapping
 from urllib.parse import urlparse
 
-TYPE_ALIASES = {
-    "115pan": "115",
-    "123pan": "123",
-    "ali": "alipan",
-    "aliyun": "alipan",
-    "189": "tianyi",
-    "139": "yun139",
-    "magnetlink": "magnet",
-}
-TYPE_HOSTS = {
-    "115": {"115.com", "115cdn.com", "anxia.com"},
-    "123": {
-        "123pan.com", "123pan.cn", "123.cn", "123684.com", "123685.com",
-        "123865.com", "123912.com", "123592.com",
+#: 资源类型唯一元数据源。
+_RESOURCE_TYPE_META: Dict[str, Dict[str, Any]] = {
+    "115": {
+        "name": "115网盘", "icon": "mdi-cloud", "color": "primary",
+        "hosts": ("115.com", "115cdn.com", "anxia.com"),
+        "previewable": True, "preview_provider": "115",
+        "password_param": "password", "aliases": ("115pan",),
     },
-    "quark": {"quark.cn"},
-    "alipan": {"alipan.com", "aliyundrive.com", "aliyundrive.net"},
-    "tianyi": {"cloud.189.cn"},
-    "yun139": {"yun.139.com", "caiyun.feixin.10086.cn"},
-    "guangya": {"guangyapan.com"},
+    "123": {
+        "name": "123网盘", "icon": "mdi-cloud-refresh-outline", "color": "purple",
+        "hosts": (
+            "123pan.com", "123pan.cn", "123.cn", "123684.com", "123685.com",
+            "123865.com", "123912.com", "123592.com",
+        ),
+        "previewable": True, "preview_provider": "123",
+        "password_param": "pwd", "aliases": ("123pan",),
+        "markers": ("123云盘", "123pan"),
+    },
+    "quark": {
+        "name": "夸克网盘", "icon": "mdi-cloud-outline", "color": "amber-darken-3",
+        "hosts": ("quark.cn",),
+        "previewable": True, "preview_provider": "quark",
+        "text_password": True, "markers": ("夸克", "quark"),
+    },
+    "alipan": {
+        "name": "阿里云盘", "icon": "mdi-cloud-sync-outline", "color": "blue",
+        "hosts": ("alipan.com", "aliyundrive.com", "aliyundrive.net"),
+        "previewable": True, "preview_provider": "alipan",
+        "text_password": True, "aliases": ("ali", "aliyun"),
+        "markers": ("阿里网盘", "aliyundrive"),
+    },
+    "baidu": {
+        "name": "百度网盘", "icon": "mdi-cloud-circle-outline", "color": "indigo",
+        "hosts": ("pan.baidu.com", "yun.baidu.com"),
+        "previewable": True, "preview_provider": "baidu",
+        "password_param": "pwd", "markers": ("百度云", "baidu"),
+    },
+    "uc": {
+        "name": "UC网盘", "icon": "mdi-cloud-download-outline",
+        "color": "deep-orange", "previewable": True,
+    },
+    "tianyi": {
+        "name": "天翼云盘", "icon": "mdi-cloud-check-outline", "color": "teal",
+        "hosts": ("cloud.189.cn",),
+        "previewable": True, "preview_provider": "tianyi",
+        "text_password": True, "aliases": ("189",), "markers": ("天翼",),
+    },
+    "guangya": {
+        "name": "光鸭网盘", "icon": "mdi-cloud-outline", "color": "teal-darken-1",
+        "hosts": ("guangyapan.com",),
+        "previewable": True, "preview_provider": "guangya",
+        "password_param": "code", "markers": ("光鸭",),
+    },
+    "yun139": {
+        "name": "移动云盘", "icon": "mdi-cloud-arrow-up-outline",
+        "color": "teal-darken-2",
+        "hosts": ("yun.139.com", "caiyun.feixin.10086.cn"),
+        "previewable": True, "preview_provider": "yun139",
+        "text_password": True, "aliases": ("139",),
+        "markers": ("中国移动云盘", "139云盘"),
+    },
+    "xunlei": {
+        "name": "迅雷网盘", "icon": "mdi-flash",
+        "color": "light-blue-darken-1", "markers": ("迅雷",),
+    },
+    "pikpak": {
+        "name": "PikPak", "icon": "mdi-cloud-upload-outline",
+        "color": "deep-purple",
+    },
+    "magnet": {
+        "name": "磁力链接", "icon": "mdi-magnet", "color": "red-darken-1",
+        "previewable": True, "aliases": ("magnetlink",),
+        "markers": ("magnet:?", "磁力"),
+    },
+    "ed2k": {
+        "name": "电驴链接", "icon": "mdi-link-variant",
+        "color": "blue-grey-darken-1", "offline": True,
+        "markers": ("ed2k://", "电驴"),
+    },
+    "torrent": {
+        "name": "BT种子", "icon": "mdi-seed",
+        "color": "deep-purple", "previewable": True,
+    },
+    "cloud": {
+        "name": "网盘路径", "icon": "mdi-folder-network-outline",
+        "color": "blue-grey", "offline": True,
+    },
+    "share": {
+        "name": "网盘分享", "icon": "mdi-link-variant", "color": "blue-grey",
+    },
+    "other": {
+        "name": "其他来源", "icon": "mdi-folder-outline", "color": "blue-grey",
+    },
+    "unknown": {
+        "name": "未知", "icon": "mdi-help-circle-outline", "color": "blue-grey",
+    },
 }
-#: 资源类型的展示元数据：名称、图标、配色、可预览与离线标记。
-#: 前端只渲染这里下发的内容，不再自行维护任何类型映射表。
-RESOURCE_TYPE_DISPLAY = {
-    "115": {"name": "115网盘", "icon": "mdi-cloud", "color": "primary", "previewable": True},
-    "123": {"name": "123网盘", "icon": "mdi-cloud-refresh-outline", "color": "purple", "previewable": True},
-    "quark": {"name": "夸克网盘", "icon": "mdi-cloud-outline", "color": "amber-darken-3", "previewable": True},
-    "alipan": {"name": "阿里云盘", "icon": "mdi-cloud-sync-outline", "color": "blue", "previewable": True},
-    "baidu": {"name": "百度网盘", "icon": "mdi-cloud-circle-outline", "color": "indigo", "previewable": True},
-    "uc": {"name": "UC网盘", "icon": "mdi-cloud-download-outline", "color": "deep-orange", "previewable": True},
-    "tianyi": {"name": "天翼云盘", "icon": "mdi-cloud-check-outline", "color": "teal", "previewable": True},
-    "guangya": {"name": "光鸭网盘", "icon": "mdi-cloud-outline", "color": "teal-darken-1", "previewable": True},
-    "yun139": {"name": "移动云盘", "icon": "mdi-cloud-arrow-up-outline", "color": "teal-darken-2", "previewable": True},
-    "xunlei": {"name": "迅雷网盘", "icon": "mdi-flash", "color": "light-blue-darken-1"},
-    "pikpak": {"name": "PikPak", "icon": "mdi-cloud-upload-outline", "color": "deep-purple"},
-    "magnet": {"name": "磁力链接", "icon": "mdi-magnet", "color": "red-darken-1", "previewable": True},
-    "ed2k": {"name": "电驴链接", "icon": "mdi-link-variant", "color": "blue-grey-darken-1", "offline": True},
-    "torrent": {"name": "BT种子", "icon": "mdi-seed", "color": "deep-purple", "previewable": True},
-    "cloud": {"name": "网盘路径", "icon": "mdi-folder-network-outline", "color": "blue-grey", "offline": True},
-    "share": {"name": "网盘分享", "icon": "mdi-link-variant", "color": "blue-grey"},
-    "other": {"name": "其他来源", "icon": "mdi-folder-outline", "color": "blue-grey"},
-    "unknown": {"name": "未知", "icon": "mdi-help-circle-outline", "color": "blue-grey"},
-}
-TYPE_NAMES = {key: value["name"] for key, value in RESOURCE_TYPE_DISPLAY.items()}
 
-SUPPORTED_CLOUD_TYPES = tuple(TYPE_HOSTS)
+#: 资源类型排序。
 RESOURCE_TYPE_ORDER = (
-    "115", "123", "quark", "guangya", "tianyi", "yun139", "alipan",
+    "115", "123", "quark", "guangya", "tianyi", "yun139", "alipan", "baidu",
     "ed2k", "magnet",
 )
 SUPPORTED_RESOURCE_TYPES = frozenset(RESOURCE_TYPE_ORDER)
@@ -59,47 +112,83 @@ RESOURCE_TYPE_PRIORITY = {
     resource_type: index
     for index, resource_type in enumerate(RESOURCE_TYPE_ORDER)
 }
+
+#: 外部类型别名。
+TYPE_ALIASES = {
+    alias: key
+    for key, meta in _RESOURCE_TYPE_META.items()
+    for alias in meta.get("aliases", ())
+}
+#: 链接域名。
+TYPE_HOSTS = {
+    key: set(meta["hosts"])
+    for key, meta in _RESOURCE_TYPE_META.items()
+    if meta.get("hosts")
+}
+SUPPORTED_CLOUD_TYPES = tuple(TYPE_HOSTS)
+
+#: 前端展示字段。
+_DISPLAY_FIELDS = ("name", "icon", "color", "previewable", "offline")
+RESOURCE_TYPE_DISPLAY = {
+    key: {
+        field: meta[field] for field in _DISPLAY_FIELDS if field in meta
+    }
+    for key, meta in _RESOURCE_TYPE_META.items()
+}
+TYPE_NAMES = {
+    key: meta["name"] for key, meta in _RESOURCE_TYPE_META.items()
+}
+
+#: PanSou 外部类型名。
 PANSOU_RESOURCE_TYPES = (
     "aliyun", "quark", "guangya", "tianyi", "yun139",
-    "115", "123", "magnet", "ed2k",
+    "115", "123", "baidu", "magnet", "ed2k",
 )
-#: 分享提取码的承载方式：写入查询参数，或作为“提取码: xxx”附言。
 SHARE_PASSWORD_QUERY_KEYS = {
-    "115": "password",
-    "123": "pwd",
-    "baidu": "pwd",
-    "guangya": "code",
+    key: meta["password_param"]
+    for key, meta in _RESOURCE_TYPE_META.items()
+    if meta.get("password_param")
 }
-#: 候选归一化阶段可直接回填的类型键：驱动类型、别名与无驱动的直通类型；
-#: share 只是描述性文案，仍需按链接继续判定真实来源。
-CANDIDATE_RESOURCE_TYPES = frozenset(
-    {*TYPE_NAMES, *TYPE_ALIASES.values(), "uc"} - {"share"}
+TEXT_PASSWORD_TYPES = frozenset(
+    key for key, meta in _RESOURCE_TYPE_META.items()
+    if meta.get("text_password")
 )
-#: 只接受附言、无法参数化提取码的网盘。
-TEXT_PASSWORD_TYPES = frozenset({"quark", "alipan", "tianyi", "yun139"})
 PREVIEW_PROVIDER_KEYS = {
-    "115": "115",
-    "123": "123",
-    "quark": "quark",
-    "guangya": "guangya",
-    "tianyi": "tianyi",
-    "yun139": "yun139",
-    "alipan": "alipan",
+    key: meta["preview_provider"]
+    for key, meta in _RESOURCE_TYPE_META.items()
+    if meta.get("preview_provider")
 }
 PREVIEW_RESOURCE_TYPES = frozenset({*PREVIEW_PROVIDER_KEYS, "magnet"})
+CANDIDATE_RESOURCE_TYPES = frozenset(TYPE_NAMES) - {"share"}
 
+#: 文本识别标记。
 _TYPE_TEXT_MARKERS = {
-    "115": ("115网盘", "115.com", "115cdn.com", "anxia.com"),
-    "123": ("123云盘", "123网盘", "123pan"),
-    "quark": ("夸克", "quark"),
-    "guangya": ("光鸭", "guangya"),
-    "tianyi": ("天翼", "cloud.189.cn"),
-    "yun139": ("移动云盘", "中国移动云盘", "yun.139.com", "139云盘"),
-    "alipan": ("阿里云盘", "阿里网盘", "alipan", "aliyundrive"),
-    "xunlei": ("迅雷", "xunlei"),
-    "ed2k": ("ed2k://", "电驴"),
-    "magnet": ("magnet:?", "磁力"),
+    key: tuple(dict.fromkeys(
+        (_RESOURCE_TYPE_META[key]["name"],)
+        + tuple(_RESOURCE_TYPE_META[key].get("hosts", ()))
+        + tuple(_RESOURCE_TYPE_META[key].get("markers", ()))
+    ))
+    for key in RESOURCE_TYPE_ORDER
 }
+
+#: 不参与面板识别的占位类型。
+_NON_RESOURCE_TYPE_KEYS = frozenset({"cloud", "share", "unknown", "other"})
+
+
+def _panel_type_index() -> Dict[str, str]:
+    """生成面板类型索引。"""
+    index: Dict[str, str] = {}
+    for key, meta in _RESOURCE_TYPE_META.items():
+        if key in _NON_RESOURCE_TYPE_KEYS:
+            continue
+        index.setdefault(key.casefold(), key)
+        name = str(meta.get("name") or "").strip()
+        if name:
+            index.setdefault(name.casefold(), key)
+    return index
+
+
+_PANEL_PLATFORM_TYPES = _panel_type_index()
 
 
 def normalize_resource_type(value: str) -> str:
@@ -108,7 +197,7 @@ def normalize_resource_type(value: str) -> str:
 
 
 def resource_type_from_url(value: str) -> str:
-    """根据标准链接 scheme 或域名识别内部资源类型。"""
+    """按链接识别资源类型。"""
     target = str(value or "").strip()
     lowered = target.casefold()
     if lowered.startswith("magnet:?"):
@@ -126,7 +215,7 @@ def resource_type_from_url(value: str) -> str:
 
 
 def resource_type_from_text(value: str) -> str:
-    """从外部类型值、链接或资源描述中识别内部资源类型。"""
+    """按类型值、链接或描述识别。"""
     text = str(value or "").strip()
     normalized = normalize_resource_type(text)
     if normalized in SUPPORTED_RESOURCE_TYPES:
@@ -136,33 +225,14 @@ def resource_type_from_text(value: str) -> str:
         return from_url
     lowered = text.casefold()
     for resource_type in RESOURCE_TYPE_ORDER:
-        if any(marker in lowered for marker in _TYPE_TEXT_MARKERS[resource_type]):
+        markers = _TYPE_TEXT_MARKERS.get(resource_type, ())
+        if any(marker in lowered for marker in markers):
             return resource_type
     return ""
 
 
-#: 占位/描述性键不参与面板识别，避免把 “other/未知” 误判成真实资源类型。
-_NON_RESOURCE_TYPE_KEYS = frozenset({"cloud", "share", "unknown", "other"})
-
-#: 面板平台键/展示名 -> 内部类型：由 RESOURCE_TYPE_DISPLAY 反向派生，
-#: 不再单独维护标签表（键名同样参与匹配，覆盖 DOM 里的 baidu/uc/xunlei 等）。
-_PANEL_PLATFORM_TYPES = {
-    **{
-        str(key).casefold(): str(key)
-        for key in RESOURCE_TYPE_DISPLAY
-        if str(key).casefold() not in _NON_RESOURCE_TYPE_KEYS
-    },
-    **{
-        str(meta.get("name") or "").casefold(): str(key)
-        for key, meta in RESOURCE_TYPE_DISPLAY.items()
-        if str(meta.get("name") or "").strip()
-           and str(key).casefold() not in _NON_RESOURCE_TYPE_KEYS
-    },
-}
-
-
 def resource_type_from_panel(value: str) -> str:
-    """识别资源站点面板的平台键或展示名，无法识别时返回空串。"""
+    """识别面板类型。"""
     text = str(value or "").strip()
     if not text:
         return ""
@@ -177,9 +247,9 @@ def resource_type_name(value: str, fallback: str = "") -> str:
 
 
 def resource_type_catalog() -> list[dict]:
-    """返回资源类型展示目录：顺序、名称、图标、配色与预览/离线标记。"""
+    """返回前端展示目录。"""
     ordered = list(RESOURCE_TYPE_ORDER) + [
-        key for key in RESOURCE_TYPE_DISPLAY
+        key for key in _RESOURCE_TYPE_META
         if key not in RESOURCE_TYPE_PRIORITY
     ]
     catalog = []
@@ -199,12 +269,12 @@ def resource_type_catalog() -> list[dict]:
 
 
 def resource_type_aliases() -> dict:
-    """返回外部类型值到内部类型键的别名表。"""
+    """返回别名表。"""
     return dict(TYPE_ALIASES)
 
 
 def append_share_password(resource_type: str, target: str, password: str) -> str:
-    """把提取码附加到分享直链：优先写查询参数，其余网盘以“提取码: xxx”附言。"""
+    """追加分享提取码。"""
     password = str(password or "").strip()
     normalized = normalize_resource_type(resource_type)
     if not password or normalized in {"magnet", "ed2k"}:
@@ -223,7 +293,7 @@ def append_share_password(resource_type: str, target: str, password: str) -> str
 
 
 def common_parent_id(rows: Any) -> str:
-    """取若干条目共同的非空父目录标识，用于回退到条目所在目录。"""
+    """返回共同父目录。"""
     parents = {
         str((row or {}).get("parent_id") or (row or {}).get("pdir_fid") or "").strip()
         for row in (rows or [])
@@ -234,7 +304,7 @@ def common_parent_id(rows: Any) -> str:
 
 
 def preview_item(item: Any) -> Dict[str, Any]:
-    """把网盘/渠道条目归一为前端统一的预览条目结构。"""
+    """归一化预览条目。"""
     if not isinstance(item, dict):
         item = getattr(item, "__dict__", {}) or {}
     name = next((str(item.get(key) or "").strip() for key in
