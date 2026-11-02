@@ -1229,9 +1229,20 @@ class SyncHandler:
                 )
             return None
         template_values = self._playback_reference.reference_values(target_file)
+        local_root = self._local_resource_path
+        drive_key = getattr(getattr(self, '_cloud_drive', None), 'key', '')
+        if drive_key == '115':
+            local_root = '/strm_media/Media/group1/disk1'
+            if hasattr(self._strm_generator, 'base_url'):
+                self._strm_generator.base_url = '/media/group1/disk1'
+        elif drive_key == 'guangya':
+            local_root = '/strm_media/Media/group3/disk1'
+            if hasattr(self._strm_generator, 'base_url'):
+                self._strm_generator.base_url = '/media/group3/disk1'
+
         try:
             strm_path, content = self._strm_generator.write(
-                local_root=self._local_resource_path,
+                local_root=local_root,
                 cloud_root=self._CLOUD_MEDIA_ROOT,
                 cloud_dir=cloud_dir,
                 file_name=file_name,

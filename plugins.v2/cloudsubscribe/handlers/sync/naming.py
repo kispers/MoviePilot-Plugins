@@ -86,7 +86,21 @@ class SyncNamingService(OwnerDelegator):
         directory = DirectoryHelper().get_dir(media=mediainfo, include_unsorted=False) if DirectoryHelper else None
         resolved = None
         if directory:
-            updates = {"library_path": root_path}
+            raw_lib = str(getattr(directory, "library_path", "") or "").rstrip("/")
+            sub_rel = ""
+            for base in ("/strm_media/Media/group3/disk1", "/media/group3/disk1", "/strm_media/Media/group1/disk1", "/media/group1/disk1", "/strm_media/Media/group2/disk1", "/media/group2/disk1"):
+                if raw_lib.startswith(base):
+                    sub_rel = raw_lib[len(base):].strip("/")
+                    break
+            if not sub_rel and raw_lib and raw_lib != "/":
+                for token in ("电视剧", "电影", "动漫", "综艺节目", "纪录片"):
+                    idx = raw_lib.find(token)
+                    if idx != -1:
+                        sub_rel = raw_lib[idx:].strip("/")
+                        break
+
+            effective_root = str(Path(root_path or "/") / sub_rel) if sub_rel else root_path
+            updates = {"library_path": effective_root}
             if hasattr(directory, "model_copy"):
                 target_directory = directory.model_copy(deep=True, update=updates)
             else:

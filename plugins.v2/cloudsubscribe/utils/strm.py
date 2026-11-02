@@ -3,7 +3,7 @@ import re
 from pathlib import Path, PurePosixPath
 from string import Formatter
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 
 class StrmTemplateError(ValueError):
@@ -189,7 +189,10 @@ class StrmGenerator:
             raise StrmTemplateError(
                 f"生成 STRM 时缺少模板变量：{', '.join(missing)}"
             )
-        return self.template.format_map(values)
+        rendered = self.template.format_map(values)
+        if str(getattr(self, 'base_url', '')).startswith('/'):
+            return unquote(rendered)
+        return rendered
 
     def local_path(
             self,
