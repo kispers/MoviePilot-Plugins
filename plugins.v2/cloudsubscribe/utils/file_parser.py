@@ -109,9 +109,13 @@ class MediaFileParser:
     def iter_files(cls, files: list, parent_path: str = "") -> Iterator[Any]:
         for item in files or []:
             name = str(item.get("name") or item.get("file_name") or "").strip()
+            native = getattr(item, "native", None)
+            native_path = native.get("_relative_path") if isinstance(native, dict) else None
             relative_path = "/".join(
                 value for value in (parent_path.strip("/"), name) if value
             )
+            if not parent_path:
+                relative_path = str(item.get("_relative_path") or native_path or relative_path)
             if item.get("is_dir"):
                 yield from cls.iter_files(
                     item.get("children") or [], relative_path

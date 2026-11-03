@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional
 
 from app.core.cache import TTLCache
@@ -333,14 +333,25 @@ class GuangyaFileService(CloudDriveFileServiceBase):
         is_dir = bool(task.get("is_dir") or task.get("isDir"))
         if is_dir:
             try:
-                response = self._get_file_list(parent_id=file_id, page=0, page_size=self.page_size)
-                data = response.get("data") or {}
-                raw_items = data if isinstance(data, list) else data.get("list") or []
-                files = [f for f in (cloud_file(item) for item in raw_items) if f]
-                if files:
-                    return files
+                files: list[CloudFile] = []
+                stack = [(file_id, name, 0)]
+                while stack:
+                    directory_id, relative_dir, depth = stack.pop()
+                    for entry in self._list(directory_id):
+                        relative_path = f"{relative_dir}/{entry.name}"
+                        if entry.is_directory:
+                            if depth < 7:
+                                stack.append((entry.id, relative_path, depth + 1))
+                            else:
+                                logger.warning(f"光鸭离线目录超过 8 层，跳过：{relative_path}")
+                            continue
+                        native = dict(entry.native) if isinstance(entry.native, dict) else {}
+                        native["_relative_path"] = relative_path
+                        files.append(replace(entry, native=native))
+                return files
             except Exception as error:
-                logger.debug(f"读取光鸭离线目录文件异常：{error}")
+                logger.warning(f"读取光鸭离线目录文件异常：{name}，{error}")
+                return []
         return [
             CloudFile(
                 id=file_id,

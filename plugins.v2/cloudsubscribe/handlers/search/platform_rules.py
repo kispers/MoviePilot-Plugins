@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 from typing import Any, Dict, List, Optional
 
 from app.log import logger
@@ -49,13 +50,19 @@ class PlatformRuleService(OwnerDelegator):
     @staticmethod
     def _file_filter_title(item: Any, index: int) -> str:
         """保留父目录中的版本信息，供平台规则识别清晰度、来源和编码。"""
+        native = getattr(item, "native", None)
+        native = native if isinstance(native, dict) else {}
         value = (
                 item.get("_relative_path")
+                or native.get("_relative_path")
                 or item.get("cloud_path")
                 or item.get("name")
                 or f"file-{index}"
         )
         title = str(value).replace("\\", " ").replace("/", " ").strip()
+        # 整包标题常写 S01+SP；具体视频已有 E 集号时，避免平台把 +SP 误作作品名。
+        if re.search(r"(?i)\bS\d{1,3}E\d{1,4}\b", str(item.get("name") or "")):
+            title = re.sub(r"(?i)\b(S\d{1,3})\+SP\b", r"\1", title)
         file_name = str(item.get("name") or "").strip()
         if file_name and file_name not in title:
             title = f"{title} {file_name}".strip()
