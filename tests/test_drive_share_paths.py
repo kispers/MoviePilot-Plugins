@@ -80,6 +80,7 @@ drive_common.safe_int = safe_int
 drive_common.iter_transfer_batches = iter_transfer_batches
 drive_common.extract_list = extract_list
 drive_common.CloudDriveFileServiceBase = object
+drive_common.create_directory_cache = MagicMock(return_value={})
 
 # 加载真实 cloud.py / definitions.py
 load_module("cloudsubscribe.core.cloud", "plugins.v2/cloudsubscribe/core/cloud.py")
@@ -131,6 +132,11 @@ GuangyaShareService = load_module(
     "cloudsubscribe.drive.guangya.share",
     "plugins.v2/cloudsubscribe/drive/guangya/share.py",
 ).GuangyaShareService
+GuangyaFileService = load_module(
+    "cloudsubscribe.drive.guangya.files",
+    "plugins.v2/cloudsubscribe/drive/guangya/files.py",
+).GuangyaFileService
+CloudFile = sys.modules["cloudsubscribe.core.cloud"].CloudFile
 
 register_package("cloudsubscribe.drive.alipan", paths=[_plugin_dir("drive", "alipan")])
 AliPanShareService = load_module(
@@ -142,6 +148,46 @@ OnlineDocsSourceDefinition = load_module(
     "cloudsubscribe.search.onlinedocs.definition",
     "plugins.v2/cloudsubscribe/search/onlinedocs/definition.py",
 ).OnlineDocsSourceDefinition
+
+
+class TestGuangyaOfflineTaskFiles(unittest.TestCase):
+    def test_multiseason_package_is_scoped_and_recursively_listed(self):
+        service = object.__new__(GuangyaFileService)
+        root_name = "The.Librarians.S01-S04.Complete.1080p.WEBRip.x265.HEVC.DDP5.1-Kolio"
+        service._list = MagicMock(side_effect=lambda directory_id: {
+            "task-root": [
+                CloudFile(id="season-1", name="Season 1", is_directory=True),
+                CloudFile(id="season-2", name="Season 2", is_directory=True),
+            ],
+            "season-1": [CloudFile(id="episode-1", name="The.Librarians.S01E01.mkv", is_directory=False)],
+            "season-2": [CloudFile(id="episode-2", name="The.Librarians.S02E01.mkv", is_directory=False)],
+        }[directory_id])
+
+        files = service.list_offline_task_files(
+            {"file_id": "task-root", "name": root_name, "is_dir": True}, "/暂存"
+        )
+
+        self.assertEqual({file.id for file in files}, {"episode-1", "episode-2"})
+        self.assertEqual(
+            next(file for file in files if file.id == "episode-1").native["_relative_path"],
+            f"{root_name}/Season 1/The.Librarians.S01E01.mkv",
+        )
+        self.assertEqual(service._list.call_count, 3)
+
+    def test_titleless_vivy_episode_keeps_release_context(self):
+        service = object.__new__(GuangyaFileService)
+        episode_name = "S01E01-My Code Name - To Make Everyone Happy With My Singing.mkv"
+        release = "Vivy -Fluorite Eye's Song- S01+SP 1080p Dual Audio BD Remux FLAC-TTGA"
+        service._list = MagicMock(return_value=[
+            CloudFile(id="vivy-e01", name=episode_name, is_directory=False)
+        ])
+
+        files = service.list_offline_task_files(
+            {"file_id": "vivy-root", "name": release, "is_dir": True}, "/暂存"
+        )
+
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].native["_relative_path"], f"{release}/{episode_name}")
 
 
 class TestTianyiShareRelativePath(unittest.TestCase):

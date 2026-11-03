@@ -2326,7 +2326,9 @@ class PostprocessService(OwnerDelegator):
             try:
                 files = task_files_func(offline_task, item.get("staging_dir") or item.get("cloud_dir") or "/")
             except Exception as e:
-                logger.debug(f"精准定位离线任务文件异常，回退扫描：{e}")
+                logger.warning(f"精准定位离线任务文件异常：{e}")
+            if str(offline_task.get("file_id") or offline_task.get("fileId") or "").strip():
+                return files
         if not files:
             files = self._cloud_query.list_files_recursive(staging_path, max_depth=6)
         if not files and item.get("cloud_dir") and item.get("cloud_dir") != item.get("staging_dir"):
@@ -2341,6 +2343,7 @@ class PostprocessService(OwnerDelegator):
             offline_task: Optional[Dict[str, Any]] = None,
     ) -> Optional[List[Dict[str, Any]]]:
         """读取完成后的真实文件树，只移动实际匹配的媒体文件。"""
+        item.pop("last_finalize_error", None)
         mediainfo, media_data = self._restore_pending_media_context(item, pending_key)
         if not mediainfo:
             self._cleanup_failed_offline_task(item, "媒体元数据不存在")
@@ -2362,7 +2365,8 @@ class PostprocessService(OwnerDelegator):
             )
             if recovered is not None:
                 return recovered
-            logger.debug(f"Magnet 已完成但真实文件树尚未就绪：{item.get('file_name')}")
+            item["last_finalize_error"] = "离线任务目录尚未列出视频文件"
+            logger.warning(f"Magnet 文件定位待重试：{item.get('file_name')}，{item['last_finalize_error']}")
             return None
 
         def directory_snapshot(cloud_dir: str) -> Tuple[bool, Dict[str, Any]]:
@@ -2506,6 +2510,8 @@ class PostprocessService(OwnerDelegator):
                     source_file, cloud_dir, target_name
                 )
             if not moved:
+                item["last_finalize_error"] = f"移动匹配文件失败：{source_name} -> {cloud_dir}/{target_name}"
+                logger.warning(f"Magnet 文件后处理待重试：{item['last_finalize_error']}")
                 continue
             if not self._finalize_magnet_single_output(
                     cloud_dir=cloud_dir,
@@ -2818,7 +2824,7 @@ class PostprocessService(OwnerDelegator):
         logger.error(
             self._FINALIZE_DEAD_LOG.format(
                 fail_count, str(item.get("file_name") or pending_key)
-            )
+            ) + (f"；最近原因：{item['last_finalize_error']}" if item.get("last_finalize_error") else "")
         )
         return True
 

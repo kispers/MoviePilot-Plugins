@@ -264,6 +264,19 @@ class TestPostprocessServiceHelpers(unittest.TestCase):
         }
         self.assertEqual(PostprocessService._media_context_key(media_item), ("media", "tv", "999", 2))
 
+    def test_task_file_lookup_never_scans_other_offline_downloads(self):
+        service = DummyPostprocessService()
+        service._cloud_query = types.SimpleNamespace(
+            list_offline_task_files=MagicMock(return_value=[]),
+            list_files_recursive=MagicMock(return_value=[{"name": "Other.Show.S01E01.mkv"}]),
+        )
+        files = service._list_magnet_files(
+            {"staging_dir": "/暂存"},
+            {"file_id": "target-task-root", "is_dir": True},
+        )
+        self.assertEqual(files, [])
+        service._cloud_query.list_files_recursive.assert_not_called()
+
 
 class TestRetryAndLocateMechanism(unittest.TestCase):
     """测试重试退避调度、死任务判断与文件定位算法。"""
