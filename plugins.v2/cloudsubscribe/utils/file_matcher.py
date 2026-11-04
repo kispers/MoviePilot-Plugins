@@ -182,6 +182,30 @@ class FileMatcher:
             return None
         if MediaFileParser.contains_other_season(name, season):
             return None
+        # Bracketed anime releases: [group][title][01][quality].mkv
+        # MetaInfo treats the release group or codec as the title in this format.
+        bracketed = re.match(
+            r"^\[[^\]]+\]\[([^\]]+)\]\[([^\]]+)\]", name
+        )
+        if bracketed and mediainfo is not None:
+            episode_tag = re.fullmatch(
+                r"(?:第\s*)?0*(\d{1,3})(?:\s*[集话話])?(?:v\d+)?",
+                bracketed.group(2).strip(), re.IGNORECASE,
+            )
+            # A pack marker such as [01-25TV全集] is not a single video episode.
+            if re.match(r"^0*\d{1,3}\s*[-~～–—至到]", bracketed.group(2)):
+                return None
+            if episode_tag:
+                expected_titles = [
+                    getattr(mediainfo, key, None)
+                    for key in ("title", "en_title", "original_title", "original_name")
+                ]
+                expected_titles.extend(getattr(mediainfo, "names", None) or [])
+                titles = re.split(r"[/／]", bracketed.group(1))
+                if any(title_matches(title, expected_titles) for title in titles):
+                    episode = int(episode_tag.group(1))
+                    if episode > 0:
+                        return episode
         meta = cls._platform_meta(name)
         if not meta:
             return None
